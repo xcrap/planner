@@ -303,7 +303,7 @@ export function ProjectList({
             <div className="space-y-2 overflow-auto mb-10">
                 {/* All Projects option */}
                 <Card
-                    className={`cursor-pointer ${isAllProjectsView ? "bg-black text-white shadow-none" : "shadow-none hover:border-neutral-300 hover:shadow-sm transition"}`}
+                    className={`cursor-pointer ${isAllProjectsView ? "bg-black text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm transition"}`}
                     onClick={handleSelectAllProjects}
                 >
                     <CardHeader className="p-4">
@@ -321,7 +321,7 @@ export function ProjectList({
 
                 {error && <p className="text-center text-red-500 py-4">{error}</p>}
                 {!loading && !error && projects.length === 0 && (
-                    <p className="text-center text-gray-500 py-4">
+                    <p className="text-center text-neutral-500 py-4">
                         No projects found. Create one to get started!
                     </p>
                 )}
@@ -330,7 +330,7 @@ export function ProjectList({
                         <ContextMenu key={project.id} >
                             <ContextMenuTrigger className="flex flex-col space-y-2">
                                 <Card
-                                    className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? "bg-black text-white shadow-none" : "shadow-none hover:border-neutral-300 hover:shadow-sm transition"}`}
+                                    className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? "bg-black text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm transition"}`}
                                     onClick={() => handleSelectProject(project)}
                                 >
                                     <CardHeader className="p-4">

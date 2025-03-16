@@ -172,7 +172,7 @@ export function TaskBar({
     const showResizeHandles = isHovering || isResizing;
 
     return (
-        <div className="relative flex items-center h-16 mb-1 group border-b border-gray-200">
+        <div className="relative flex items-center h-16 mb-1 group border-b border-neutral-200">
             <div className="px-4 w-60 truncate font-medium text-base">
                 {/* Show project name when in All Projects view */}
                 {isAllProjectsView ? (

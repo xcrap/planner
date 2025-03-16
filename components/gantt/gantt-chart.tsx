@@ -453,14 +453,14 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                         <button
                             type="button"
                             onClick={() => setDayWidth(prev => Math.max(30, prev - 10))}
-                            className="p-1 rounded hover:bg-gray-200"
+                            className="p-1 rounded hover:bg-neutral-200"
                         >
                             Zoom Out
                         </button>
                         <button
                             type="button"
                             onClick={() => setDayWidth(prev => Math.min(120, prev + 10))}
-                            className="p-1 rounded hover:bg-gray-200"
+                            className="p-1 rounded hover:bg-neutral-200"
                         >
                             Zoom In
                         </button>
@@ -534,7 +534,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
                             if (tasksToRender.length === 0) {
                                 return (
-                                    <div className="flex items-center justify-center h-40 text-gray-500">
+                                    <div className="flex items-center justify-center h-40 text-neutral-500">
                                         <p>No tasks yet. Click "Add Task" to create one.</p>
                                     </div>
                                 );
