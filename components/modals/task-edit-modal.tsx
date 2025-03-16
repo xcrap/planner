@@ -87,7 +87,7 @@ export function TaskEditModal() {
             startDate: startDateStr,
             endDate: endDateStr,
             completed: selectedTask.completed || false,
-            projectId: selectedTask.projectId || 0,
+            projectId: selectedTask.projectId,
         });
     }, [selectedTask]);
 
@@ -97,7 +97,19 @@ export function TaskEditModal() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (!formData.projectId) {
+            alert("Please select a project"); // Add user feedback
+            return;
+        }
+
         console.log('Submitting form data:', formData);
+
+        // Validate project ID before proceeding
+        if (!formData.projectId || formData.projectId <= 0) {
+            console.error("Invalid project ID");
+            return;
+        }
 
         // Add UTC time to indicate these are UTC dates
         const updatedTask = {
@@ -114,14 +126,7 @@ export function TaskEditModal() {
 
                 // Dispatch a custom event to notify all components that tasks have changed
                 window.dispatchEvent(new Event('tasks-changed'));
-
-                // If the task belongs to the currently selected project in the Gantt chart,
-                // trigger a refresh there too
-                if (typeof window.currentProjectId !== 'undefined' &&
-                    (window.currentProjectId === updatedTask.projectId ||
-                        window.currentProjectId === selectedTask.projectId)) {
-                    window.dispatchEvent(new Event('refresh-gantt'));
-                }
+                window.dispatchEvent(new Event('refresh-gantt'));
             })
             .catch(error => {
                 console.error("Failed to update task:", error);

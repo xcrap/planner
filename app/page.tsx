@@ -45,7 +45,7 @@ export default function Home() {
     };
 
     const handleTasksChanged = async () => {
-        if (selectedProject) {
+        if (selectedProject && selectedProject.id > 0) {  // Add validation check
             try {
                 const response = await fetch(`/api/projects/${selectedProject.id}`);
                 const updatedProject = await response.json();

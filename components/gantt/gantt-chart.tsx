@@ -68,26 +68,22 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
     };
 
     useEffect(() => {
-        // Add this at the beginning of the component to track the current project
-        if (project?.id) {
-            window.currentProjectId = project.id;
-        }
-
-        // Subscribe to refresh-gantt events
         const handleRefreshGantt = () => {
+            // Always call onTasksChanged to refresh data
             onTasksChanged();
+
+            // If in global view, also refresh all projects
+            if (isAllProjectsView) {
+                fetchAllProjects();
+            }
         };
 
         window.addEventListener('refresh-gantt', handleRefreshGantt);
 
         return () => {
             window.removeEventListener('refresh-gantt', handleRefreshGantt);
-            // Clean up the global reference when component unmounts
-            if (window.currentProjectId === project?.id) {
-                window.currentProjectId = undefined;
-            }
         };
-    }, [project?.id, onTasksChanged]);
+    }, [onTasksChanged, isAllProjectsView, fetchAllProjects]);
 
     // Modify the timeRange calculation to include tasks from all projects when in "All Projects" view
     useEffect(() => {
