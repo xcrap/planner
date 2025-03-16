@@ -10,7 +10,8 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
     const formatUTCDate = (date: Date, format: 'day' | 'month') => {
         if (format === 'day') {
             return date.toLocaleString('en', { day: 'numeric', timeZone: 'UTC' });
-        } else if (format === 'month') {
+        }
+        if (format === 'month') {
             return date.toLocaleString('en', { month: 'short', timeZone: 'UTC' });
         }
         return '';
@@ -38,14 +39,14 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
 
                 {/* Days */}
                 <div className="flex">
-                    {timeRange.map((date, i) => {
+                    {timeRange.map((date) => {
                         const isCurrentDay = isDateToday(date);
                         // Today's styling takes precedence over weekend styling
                         const bgColorClass = isCurrentDay ? 'bg-yellow-50' : (isWeekend(date) ? 'bg-neutral-50' : '');
 
                         return (
                             <div
-                                key={i}
+                                key={date.getTime()}
                                 className={`flex flex-col items-center justify-center border-r border-neutral-200 
                                     ${bgColorClass} ${isCurrentDay ? 'border-yellow-200' : ''}`}
                                 style={{ width: `${dayWidth}px`, height: '60px' }}
