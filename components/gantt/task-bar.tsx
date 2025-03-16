@@ -30,6 +30,7 @@ type TaskBarProps = {
     onResizeEnd: () => void;
     onTaskClick: (task: Task) => void;
     onReorder: (taskId: number, newOrder: number) => void;
+    todayOffset?: number; // New prop for today's position
 };
 
 export function TaskBar({
@@ -50,26 +51,18 @@ export function TaskBar({
     onResize,
     onResizeEnd,
     onTaskClick,
-    onReorder
+    onReorder,
+    todayOffset
 }: TaskBarProps) {
     const [dragStartX, setDragStartX] = useState<number>(0);
     const [initialX, setInitialX] = useState<number>(0);
-    const [lastDragOffset, setLastDragOffset] = useState<number>(0);
-    const [lastResizeOffset, setLastResizeOffset] = useState<number>(0);
-    const [mouseDragActive, setMouseDragActive] = useState<boolean>(false);
-    const [mouseResizeActive, setMouseResizeActive] = useState<boolean>(false);
-    const [resizeSide, setResizeSide] = useState<'start' | 'end' | null>(null);
     const [hasMovement, setHasMovement] = useState<boolean>(false);
+    const [hoverEdge, setHoverEdge] = useState<'start' | 'end' | null>(null);
     const barRef = useRef<HTMLDivElement>(null);
-
-    // Calculate position with preview offsets during drag/resize
-    const previewOffset = mouseDragActive ? lastDragOffset : 0;
-    const previewResizeOffset = mouseResizeActive && resizeSide === 'start' ? lastResizeOffset : 0;
-    const previewResizeEndOffset = mouseResizeActive && resizeSide === 'end' ? lastResizeOffset : 0;
     
-    // Position calculations with visual feedback
-    const left = (startOffset + previewOffset + previewResizeOffset) * dayWidth;
-    const width = (duration - previewResizeOffset + previewResizeEndOffset) * dayWidth;
+    // The startOffset and duration props now include preview values from parent
+    const left = startOffset * dayWidth;
+    const width = duration * dayWidth;
 
     // Normalize date to UTC
     const normalizeToUTCDate = (dateString: string) => {
@@ -93,8 +86,6 @@ export function TaskBar({
         const rect = barRef.current?.getBoundingClientRect();
         setDragStartX(e.clientX);
         setInitialX(rect?.left || 0);
-        setLastDragOffset(0);
-        setMouseDragActive(true);
         setHasMovement(false);
         onDragStart(task.id);
     };
@@ -104,9 +95,6 @@ export function TaskBar({
         e.preventDefault();
         e.stopPropagation();
         setDragStartX(e.clientX);
-        setLastResizeOffset(0);
-        setMouseResizeActive(true);
-        setResizeSide(side);
         setHasMovement(false);
         onResizeStart(task.id, side);
     };
@@ -122,55 +110,37 @@ export function TaskBar({
 
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
-            if (mouseDragActive) {
-                const deltaX = e.clientX - dragStartX;
-                // Convert pixel movement to days with proper rounding
-                const exactDaysOffset = deltaX / dayWidth;
-                const daysOffset = Math.round(exactDaysOffset);
-                
-                // Only trigger if days changed
-                if (daysOffset !== lastDragOffset) {
-                    console.log(`Mouse drag: deltaX=${deltaX}, exactDaysOffset=${exactDaysOffset}, rounded=${daysOffset}`);
-                    setLastDragOffset(daysOffset);
-                    setHasMovement(true);
-                    onDrag(task.id, daysOffset);
-                }
-            } else if (mouseResizeActive && resizeSide) {
-                const deltaX = e.clientX - dragStartX;
-                // Convert pixel movement to days with proper rounding
-                const exactDaysOffset = deltaX / dayWidth;
-                const daysOffset = Math.round(exactDaysOffset);
-                
-                // Only trigger if days changed
-                if (daysOffset !== lastResizeOffset) {
-                    console.log(`Mouse resize: side=${resizeSide}, deltaX=${deltaX}, exactDaysOffset=${exactDaysOffset}, rounded=${daysOffset}`);
-                    setLastResizeOffset(daysOffset);
-                    setHasMovement(true);
-                    onResize(task.id, daysOffset);
-                }
+            // Calculate the delta X movement
+            const deltaX = e.clientX - dragStartX;
+            
+            if (deltaX !== 0) {
+                setHasMovement(true);
+            }
+            
+            // Convert pixel movement to days
+            const exactDaysOffset = deltaX / dayWidth;
+            const daysOffset = Math.round(exactDaysOffset);
+            
+            if (isDragging) {
+                onDrag(task.id, daysOffset);
+            } else if (isResizing && resizeEdge) {
+                onResize(task.id, daysOffset);
             }
         };
 
         const handleMouseUp = () => {
-            if (mouseDragActive) {
-                setMouseDragActive(false);
+            if (isDragging) {
                 onDragEnd();
             }
-            if (mouseResizeActive) {
-                setMouseResizeActive(false);
-                setResizeSide(null);
+            if (isResizing) {
                 onResizeEnd();
             }
-            
-            // Reset tracking variables
-            setLastDragOffset(0);
-            setLastResizeOffset(0);
             
             // Reset movement flag after a short delay
             setTimeout(() => setHasMovement(false), 100);
         };
 
-        if (mouseDragActive || mouseResizeActive) {
+        if (isDragging || isResizing) {
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
         }
@@ -179,7 +149,12 @@ export function TaskBar({
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [mouseDragActive, mouseResizeActive, dragStartX, initialX, dayWidth, resizeSide, task.id, onDrag, onResize, onDragEnd, onResizeEnd, lastDragOffset, lastResizeOffset]);
+    }, [isDragging, isResizing, dragStartX, dayWidth, resizeEdge, task.id, onDrag, onResize, onDragEnd, onResizeEnd]);
+
+    // Detect which edge is being hovered
+    const handleResizeHover = (edge: 'start' | 'end' | null) => {
+        setHoverEdge(edge);
+    };
 
     const getTaskStyle = () => ({
         left: `${left}px`,
@@ -187,6 +162,8 @@ export function TaskBar({
         backgroundColor: task.completed ? '#8dac97' : projectColor,
         opacity: isDragging || isResizing ? 0.7 : 1,
         cursor: isDragging ? 'grabbing' : 'grab',
+        transition: isDragging || isResizing ? 'none' : 'box-shadow 0.2s ease',
+        boxShadow: isResizing || hoverEdge ? '0 0 8px rgba(0, 0, 0, 0.3)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
     });
 
     // Extract readable dates for display
@@ -194,21 +171,40 @@ export function TaskBar({
     const endDateDisplay = formatUTCDate(task.endDate);
 
     return (
-        <div className="relative flex items-center h-14 mb-1 group">
+        <div className="relative flex items-center h-14 mb-1 group border-b border-gray-200">
             <div className="px-4 w-48 truncate font-medium">{task.name}</div>
+
+            {/* Today indicator line (if today is within the visible range) */}
+            {todayOffset !== undefined && (
+                <div 
+                    className="absolute top-0 bottom-0 w-[2px] bg-blue-500 z-5 opacity-70"
+                    style={{ left: `${todayOffset * dayWidth + 48}px` }}
+                />
+            )}
 
             <div
                 ref={barRef}
-                className="relative rounded-md border border-gray-400 text-white px-2 py-1 flex items-center h-10 z-10"
+                className={`relative rounded-md border border-gray-400 text-white px-2 py-1 flex items-center h-10 z-10
+                    ${isResizing ? 'ring-2 ring-blue-400' : ''}`}
                 style={getTaskStyle()}
                 onMouseDown={handleDragStart}
                 onClick={handleClick}
             >
                 {/* Resize handle - left edge */}
                 <div
-                    className="absolute left-0 top-0 w-3 h-full cursor-ew-resize hover:bg-black hover:bg-opacity-20"
+                    className={`absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
+                        ${(isResizing && resizeEdge === 'start') || hoverEdge === 'start' 
+                          ? 'bg-blue-400 opacity-50 w-4 -ml-1 rounded-l-md' 
+                          : 'hover:bg-blue-400 hover:opacity-30'}`}
                     onMouseDown={(e) => handleResizeStart(e, 'start')}
-                />
+                    onMouseEnter={() => handleResizeHover('start')}
+                    onMouseLeave={() => handleResizeHover(null)}
+                >
+                    {/* Visual grip for resize handle */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-4 border-l border-r border-white opacity-70 mx-[3px]"></div>
+                    </div>
+                </div>
 
                 <span className="truncate text-sm select-none">
                     {task.name} ({startDateDisplay} - {endDateDisplay})
@@ -216,9 +212,21 @@ export function TaskBar({
 
                 {/* Resize handle - right edge */}
                 <div
-                    className="absolute right-0 top-0 w-3 h-full cursor-ew-resize hover:bg-black hover:bg-opacity-20"
+                    className={`absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
+                        ${(isResizing && resizeEdge === 'end') || hoverEdge === 'end' 
+                          ? 'bg-blue-400 opacity-50 w-4 -mr-1 rounded-r-md' 
+                          : 'hover:bg-blue-400 hover:opacity-30'}`}
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
-                />
+                    onMouseEnter={() => handleResizeHover('end')}
+                    onMouseLeave={() => handleResizeHover(null)}
+                >
+                    {/* Visual grip for resize handle */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="h-4 border-l border-r border-white opacity-70 mx-[3px]"></div>
+                    </div>
+                </div>
+
+                {/* Removed the duration indicator that was here */}
             </div>
         </div>
     );

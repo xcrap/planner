@@ -33,10 +33,13 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
     const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
     const [resizingTaskId, setResizingTaskId] = useState<number | null>(null);
     const [resizeEdge, setResizeEdge] = useState<'start' | 'end' | null>(null);
-    const [throttle, setThrottle] = useState<NodeJS.Timeout | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [dayWidth, setDayWidth] = useState(60);
     const { setSelectedTask } = useTaskContext();
+
+    // New state for tracking preview offsets
+    const [dragPreviewOffset, setDragPreviewOffset] = useState<number>(0);
+    const [resizePreviewOffset, setResizePreviewOffset] = useState<number>(0);
 
     // Normalize date to UTC
     const normalizeToUTCDate = (date: string) => {
@@ -95,120 +98,102 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
     const handleTaskDragStart = (taskId: number) => {
         setDraggingTaskId(taskId);
+        setDragPreviewOffset(0);
     };
 
     const handleTaskDrag = (taskId: number, daysOffset: number) => {
         if (!project) return;
 
-        const task = project.tasks.find(t => t.id === taskId);
-        if (!task) return;
-
-        if (throttle) {
-            clearTimeout(throttle);
-        }
-
-        console.log(`Dragging task ${taskId} by ${daysOffset} days`);
-
-        // Extract dates from the string format and create new Date objects
-        const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
-        const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
-        
-        // Create UTC dates using the exact year, month, and day from the strings
-        const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
-        const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
-
-        // Create new Date objects for updating to avoid mutation
-        const newStartDate = new Date(startDate);
-        const newEndDate = new Date(endDate);
-        
-        // Add the offset directly to the day component
-        newStartDate.setUTCDate(newStartDate.getUTCDate() + daysOffset);
-        newEndDate.setUTCDate(newEndDate.getUTCDate() + daysOffset);
-
-        console.log(`Original dates: ${startDate.toISOString()} to ${endDate.toISOString()}`);
-        console.log(`New dates: ${newStartDate.toISOString()} to ${newEndDate.toISOString()}`);
-
-        // Update with a short delay
-        setThrottle(setTimeout(() => {
-            updateTaskDates(taskId, newStartDate, newEndDate);
-        }, 50)); // Reduced throttle time for more responsive drag
+        // Just update the preview offset, don't make API call
+        setDragPreviewOffset(daysOffset);
     };
 
-    const handleTaskDragEnd = () => {
-        if (throttle) {
-            clearTimeout(throttle);
-            setThrottle(null);
+    const handleTaskDragEnd = async () => {
+        if (draggingTaskId && dragPreviewOffset !== 0) {
+            // Only make the API call when dragging ends
+            const task = project?.tasks.find(t => t.id === draggingTaskId);
+            if (task) {
+                // Extract dates from the string format and create new Date objects
+                const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
+                const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
+
+                // Create UTC dates using the exact year, month, and day from the strings
+                const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
+                const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
+
+                // Apply the preview offset
+                const newStartDate = new Date(startDate);
+                const newEndDate = new Date(endDate);
+                newStartDate.setUTCDate(newStartDate.getUTCDate() + dragPreviewOffset);
+                newEndDate.setUTCDate(newEndDate.getUTCDate() + dragPreviewOffset);
+
+                await updateTaskDates(draggingTaskId, newStartDate, newEndDate);
+            }
         }
+
+        // Reset states
         setDraggingTaskId(null);
+        setDragPreviewOffset(0);
         onTasksChanged();
     };
 
     const handleTaskResizeStart = (taskId: number, edge: 'start' | 'end') => {
         setResizingTaskId(taskId);
         setResizeEdge(edge);
+        setResizePreviewOffset(0);
     };
 
     const handleTaskResize = (taskId: number, daysOffset: number) => {
         if (!project) return;
 
-        const task = project.tasks.find(t => t.id === taskId);
-        if (!task) return;
-
-        if (throttle) {
-            clearTimeout(throttle);
-        }
-
-        console.log(`Resizing task ${taskId} edge ${resizeEdge} by ${daysOffset} days`);
-
-        // Extract dates from the string format and create new Date objects
-        const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
-        const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
-        
-        // Create UTC dates using the exact year, month, and day from the strings
-        const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
-        const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
-
-        // Create new Date objects for updating to avoid mutation
-        let newStartDate = new Date(startDate);
-        let newEndDate = new Date(endDate);
-
-        // Apply the offset consistently for resize operations using UTC
-        if (resizeEdge === 'start') {
-            // Adjust the start date directly
-            newStartDate.setUTCDate(startDate.getUTCDate() + daysOffset);
-            
-            // Make sure start date is not after end date
-            if (newStartDate >= endDate) {
-                newStartDate = new Date(endDate);
-                newStartDate.setUTCDate(endDate.getUTCDate() - 1);
-            }
-            
-            console.log(`Resizing start from ${startDate.toISOString()} to ${newStartDate.toISOString()}`);
-        } else if (resizeEdge === 'end') {
-            // Adjust the end date directly
-            newEndDate.setUTCDate(endDate.getUTCDate() + daysOffset);
-            
-            // Make sure end date is not before start date
-            if (newEndDate <= startDate) {
-                newEndDate = new Date(startDate);
-                newEndDate.setUTCDate(startDate.getUTCDate() + 1);
-            }
-            
-            console.log(`Resizing end from ${endDate.toISOString()} to ${newEndDate.toISOString()}`);
-        }
-
-        setThrottle(setTimeout(() => {
-            updateTaskDates(taskId, newStartDate, newEndDate);
-        }, 100));
+        // Just update the preview offset, don't make API call
+        setResizePreviewOffset(daysOffset);
     };
 
-    const handleTaskResizeEnd = () => {
-        if (throttle) {
-            clearTimeout(throttle);
-            setThrottle(null);
+    const handleTaskResizeEnd = async () => {
+        if (resizingTaskId && resizeEdge && resizePreviewOffset !== 0) {
+            // Only make the API call when resizing ends
+            const task = project?.tasks.find(t => t.id === resizingTaskId);
+            if (task) {
+                // Extract dates from the string format and create new Date objects
+                const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
+                const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
+
+                // Create UTC dates using the exact year, month, and day from the strings
+                const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
+                const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
+
+                // Create new Date objects for updating
+                let newStartDate = new Date(startDate);
+                let newEndDate = new Date(endDate);
+
+                // Apply the resize offset only to the appropriate edge
+                if (resizeEdge === 'start') {
+                    newStartDate.setUTCDate(startDate.getUTCDate() + resizePreviewOffset);
+
+                    // Ensure start date is before end date
+                    if (newStartDate >= endDate) {
+                        newStartDate = new Date(endDate);
+                        newStartDate.setUTCDate(endDate.getUTCDate() - 1);
+                    }
+                } else {
+                    newEndDate.setUTCDate(endDate.getUTCDate() + resizePreviewOffset);
+
+                    // Ensure end date is after start date
+                    if (newEndDate <= startDate) {
+                        newEndDate = new Date(startDate);
+                        newEndDate.setUTCDate(startDate.getUTCDate() + 1);
+                    }
+                }
+
+                await updateTaskDates(resizingTaskId, newStartDate, newEndDate);
+            }
         }
+
+        // Reset states
         setResizingTaskId(null);
         setResizeEdge(null);
+        setResizePreviewOffset(0);
         onTasksChanged();
     };
 
@@ -217,9 +202,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             // Format dates in UTC for the API request using ISO string and extracting the date part
             const startDateFormatted = startDate.toISOString().split('T')[0];
             const endDateFormatted = endDate.toISOString().split('T')[0];
-            
-            console.log("Updating task dates to:", startDateFormatted, endDateFormatted);
-            
+
             const response = await fetch(`/api/tasks/${taskId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -228,7 +211,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                     endDate: `${endDateFormatted}T00:00:00.000Z`,
                 })
             });
-            
+
             if (response.ok) {
                 // Make sure we call onTasksChanged to refresh the whole UI
                 onTasksChanged();
@@ -260,8 +243,50 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             projectId: project.id,
             order: project.tasks.length // Add order to maintain consistency
         };
-        
+
         setSelectedTask(newTask as Task); // Cast to Task since we know this is a new task
+    };
+
+    // Get today's date in UTC format for highlighting
+    const getTodayInUTC = () => {
+        const today = new Date();
+        return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    };
+
+    // Calculate today's offset from the start of the time range
+    const calculateTodayOffset = () => {
+        if (timeRange.length === 0) return undefined;
+
+        // Create today's date in local timezone, but at midnight UTC
+        const today = new Date();
+        const todayUTC = new Date(Date.UTC(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate()
+        ));
+
+        // Get the first date from timeRange
+        const timeRangeStart = timeRange[0];
+
+        // Calculate offset
+        const offset = differenceInDays(todayUTC, timeRangeStart);
+
+        // Only return an offset if today is within the visible range
+        if (offset >= 0 && offset < timeRange.length) {
+            return offset;
+        }
+
+        return undefined;
+    };
+
+    const todayOffset = calculateTodayOffset();
+
+    // Check if a date is today in UTC
+    const isDateToday = (date: Date) => {
+        const today = new Date();
+        return date.getUTCFullYear() === today.getFullYear() &&
+            date.getUTCMonth() === today.getMonth() &&
+            date.getUTCDate() === today.getDate();
     };
 
     if (!project) {
@@ -315,18 +340,32 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
                     {/* Day columns that span the entire task area */}
                     <div className="absolute left-48 right-0 top-[60px] bottom-0 z-0">
-                        {timeRange.map((date, i) => (
+                        {timeRange.map((date, i) => {
+                            const isCurrentDay = isDateToday(date);
+                            // Today's styling takes precedence over weekend styling
+                            const bgColorClass = isCurrentDay ? 'bg-blue-50' : (isWeekend(date) ? 'bg-gray-50' : '');
+
+                            return (
+                                <div
+                                    key={i}
+                                    className={`absolute top-0 bottom-0 ${i === 0 ? 'border-l' : ''} border-r border-neutral-200 ${bgColorClass}`}
+                                    style={{
+                                        left: `${i * dayWidth}px`,
+                                        width: `${dayWidth}px`,
+                                    }}
+                                />
+                            );
+                        })}
+                        {/* Today indicator line that spans entire chart */}
+                        {todayOffset !== undefined && (
                             <div
-                                key={i}
-                                className={`absolute top-0 bottom-0 ${i === 0 ? 'border-l' : ''} border-r border-neutral-200 ${
-                                    isWeekend(date) ? 'bg-gray-50' : ''
-                                }`}
+                                className="absolute top-[10px] bottom-0 w-[2px] bg-blue-500 z-5"
                                 style={{
-                                    left: `${i * dayWidth}px`,
-                                    width: `${dayWidth}px`,
+                                    left: `${(todayOffset * dayWidth) + (dayWidth / 2)}px`, // Center in column
+                                    opacity: 0.4
                                 }}
                             />
-                        ))}
+                        )}
                     </div>
 
                     {/* Tasks container */}
@@ -338,27 +377,32 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                                     // Extract dates directly from the string format
                                     const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
                                     const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
-                                    
+
                                     // Create UTC dates using the exact year, month, and day
                                     const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
                                     const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
-                                    
+
                                     // Get the first date in the time range
                                     const timeRangeStartParts = timeRange[0].toISOString().split('T')[0].split('-').map(Number);
                                     const timeRangeStartUTC = new Date(Date.UTC(timeRangeStartParts[0], timeRangeStartParts[1] - 1, timeRangeStartParts[2]));
-                                    
+
                                     // Calculate days between UTC dates
                                     const startOffset = differenceInDays(startDate, timeRangeStartUTC);
                                     // Calculate duration using UTC dates
                                     const duration = differenceInDays(endDate, startDate) + 1;
+
+                                    // Apply preview offsets for the active task
+                                    const previewDragOffset = (draggingTaskId === task.id) ? dragPreviewOffset : 0;
+                                    const previewResizeStartOffset = (resizingTaskId === task.id && resizeEdge === 'start') ? resizePreviewOffset : 0;
+                                    const previewResizeEndOffset = (resizingTaskId === task.id && resizeEdge === 'end') ? resizePreviewOffset : 0;
 
                                     return (
                                         <TaskBar
                                             key={task.id}
                                             task={task}
                                             index={index}
-                                            startOffset={startOffset}
-                                            duration={duration}
+                                            startOffset={startOffset + previewDragOffset + previewResizeStartOffset}
+                                            duration={duration - previewResizeStartOffset + previewResizeEndOffset}
                                             dayWidth={dayWidth}
                                             isDragging={draggingTaskId === task.id}
                                             isResizing={resizingTaskId === task.id}

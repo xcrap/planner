@@ -1,4 +1,4 @@
-import { isWeekend } from 'date-fns';
+import { isWeekend, isToday } from 'date-fns';
 
 type TimelineProps = {
     timeRange: Date[];
@@ -22,6 +22,14 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
         return days[date.getUTCDay()];
     };
 
+    // Check if a date is today (comparing in UTC)
+    const isDateToday = (date: Date) => {
+        const today = new Date();
+        return date.getUTCFullYear() === today.getUTCFullYear() &&
+               date.getUTCMonth() === today.getUTCMonth() &&
+               date.getUTCDate() === today.getUTCDate();
+    };
+
     return (
         <div className="sticky top-0 bg-white z-10 border-b border-gray-200">
             <div className="flex">
@@ -30,20 +38,27 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
 
                 {/* Days */}
                 <div className="flex">
-                    {timeRange.map((date, i) => (
-                        <div
-                            key={i}
-                            className={`flex flex-col items-center justify-center border-r ${i === 0 ? 'border-l' : ''} border-gray-200 ${isWeekend(new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))) ? 'bg-gray-50' : ''}`}
-                            style={{ width: `${dayWidth}px`, height: '60px' }}
-                        >
-                            <div className="text-xs font-medium">
-                                {getUTCDayOfWeek(date)}
+                    {timeRange.map((date, i) => {
+                        const isCurrentDay = isDateToday(date);
+                        // Today's styling takes precedence over weekend styling
+                        const bgColorClass = isCurrentDay ? 'bg-blue-50' : (isWeekend(date) ? 'bg-gray-50' : '');
+                        
+                        return (
+                            <div
+                                key={i}
+                                className={`flex flex-col items-center justify-center border-r ${i === 0 ? 'border-l' : ''} border-gray-200 
+                                    ${bgColorClass} ${isCurrentDay ? 'border-blue-300' : ''}`}
+                                style={{ width: `${dayWidth}px`, height: '60px' }}
+                            >
+                                <div className={`text-xs font-medium ${isCurrentDay ? 'text-blue-700' : ''}`}>
+                                    {getUTCDayOfWeek(date)}
+                                </div>
+                                <div className={`text-sm font-bold ${isCurrentDay ? 'text-blue-700' : ''}`}>
+                                    {formatUTCDate(date, 'month')} {formatUTCDate(date, 'day')}
+                                </div>
                             </div>
-                            <div className="text-sm font-bold">
-                                {formatUTCDate(date, 'month')} {formatUTCDate(date, 'day')}
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
         </div>
