@@ -108,11 +108,11 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
         // Use tasks from all projects when in "All Projects" view
         if (isAllProjectsView && allProjects.length > 0) {
-            allProjects.forEach(proj => {
+            for (const proj of allProjects) {
                 if (proj.tasks && Array.isArray(proj.tasks)) {
                     tasks = [...tasks, ...proj.tasks];
                 }
-            });
+            }
         } else if (project.tasks && project.tasks.length > 0) {
             // Use tasks from the selected project
             tasks = project.tasks;
@@ -154,7 +154,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         let earliestDate = normalizeToUTCDate(tasks[0].startDate);
         let latestDate = normalizeToUTCDate(tasks[0].endDate);
 
-        tasks.forEach(task => {
+        for (const task of tasks) {
             const taskStartDate = normalizeToUTCDate(task.startDate);
             const taskEndDate = normalizeToUTCDate(task.endDate);
 
@@ -165,7 +165,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             if (taskEndDate > latestDate) {
                 latestDate = taskEndDate;
             }
-        });
+        }
 
         earliestDate = addDays(earliestDate, -3);
         latestDate = addDays(latestDate, 3);
@@ -297,7 +297,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             const startDateFormatted = startDate.toISOString().split('T')[0];
             const endDateFormatted = endDate.toISOString().split('T')[0];
 
-            let projectId;
+            let projectId: number | undefined;
             if (isAllProjectsView) {
                 const task = allProjects
                     .flatMap(p => p.tasks)
@@ -483,7 +483,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
                             return (
                                 <div
-                                    key={i}
+                                    key={date.toISOString()}
                                     className={`absolute top-0 bottom-0 ${i === 0 ? 'border-l' : ''} border-r border-neutral-200 ${bgColorClass}`}
                                     style={{
                                         left: `${i * dayWidth}px`,
@@ -511,11 +511,11 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
                             if (isAllProjectsView) {
                                 // Collect tasks from all projects
-                                allProjects.forEach(proj => {
+                                for (const proj of allProjects) {
                                     if (proj.tasks) {
                                         tasksToRender = [...tasksToRender, ...proj.tasks];
                                     }
-                                });
+                                }
                                 tasksToRender.sort((a, b) => {
                                     // First by project
                                     if (a.projectId !== b.projectId) {
