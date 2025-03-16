@@ -5,23 +5,21 @@ const path = require('node:path');
 const { execSync } = require('node:child_process');
 
 async function main() {
-    // Check if the database file exists
     const dbPath = path.join(process.cwd(), 'gantt.db');
-    const dbExists = fs.existsSync(dbPath) && fs.statSync(dbPath).size > 0;
-
-    if (dbExists) {
-        console.log('Database already exists, skipping initialization');
-        return;
+    
+    // Delete existing database if it exists
+    if (fs.existsSync(dbPath)) {
+        console.log('Removing existing database...');
+        fs.unlinkSync(dbPath);
     }
 
     console.log('Creating database schema...');
 
     try {
-        // First, generate the Prisma client and create the schema
+        // Generate Prisma client and create schema
         execSync('npx prisma generate', { stdio: 'inherit' });
         console.log('Prisma client generated.');
 
-        // Push the schema to the database (dev mode - creates tables)
         execSync('npx prisma db push', { stdio: 'inherit' });
         console.log('Database schema created.');
 
@@ -128,6 +126,7 @@ async function main() {
         console.log('Sample data added successfully!');
     } catch (error) {
         console.error('Error during database initialization:', error);
+        process.exit(1);
     }
 }
 

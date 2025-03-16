@@ -7,9 +7,7 @@ A Next.js application for managing projects and tasks with a Gantt chart view.
 - Project management (create, edit, delete projects)
 - Task management (create, edit, delete tasks)
 - Interactive Gantt chart visualization
-- Drag and drop tasks to change dates
-- Resize tasks to modify duration
-- Reorder tasks within a project
+- Drag and drop tasks to change dates, resize to change duration
 - Local SQLite database storage
 
 ## Getting Started
@@ -27,7 +25,6 @@ A Next.js application for managing projects and tasks with a Gantt chart view.
 
 3. Initialize the database:
    ```bash
-   npx prisma generate
    npm run setup
    ```
 

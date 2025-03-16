@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "setup": "node migrations/init.js"
+    "setup": "node -r ts-node/register migrations/init.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.3.1",
