@@ -566,10 +566,13 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                                 // Get the color based on project
                                 const taskColor = getProjectColorForTask(task.projectId);
 
+                                // Create a new variable for the task with optional project info
+                                let taskToRender = task;
+
                                 // Add project info to the task when in All Projects view
                                 if (isAllProjectsView) {
                                     const taskProject = allProjects.find(p => p.id === task.projectId);
-                                    task = {
+                                    taskToRender = {
                                         ...task,
                                         projectName: taskProject?.name || 'Unknown Project'
                                     };
@@ -578,7 +581,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                                 return (
                                     <TaskBar
                                         key={task.id}
-                                        task={task}
+                                        task={taskToRender}
                                         index={index}
                                         startOffset={startOffset + previewDragOffset + previewResizeStartOffset}
                                         duration={duration - previewResizeStartOffset + previewResizeEndOffset}
