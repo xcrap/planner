@@ -63,7 +63,7 @@ export function AllTasksList({ tasks, onTasksChanged }: AllTasksListProps) {
     };
 
     return (
-        <div className="p-4">
+        <div className="">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">All Tasks</h3>
             </div>

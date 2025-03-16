@@ -6,25 +6,7 @@ import { GanttChart } from '@/components/gantt/gantt-chart';
 import { initializeDatabase } from '@/lib/db';
 import { TaskProvider } from '@/contexts/task-context';
 import { TaskEditModal } from '@/components/modals/task-edit-modal';
-
-type Project = {
-    id: number;
-    name: string;
-    description: string | null;
-    color: string;
-    tasks: Task[];
-};
-
-type Task = {
-    id: number;
-    name: string;
-    description: string | null;
-    startDate: string;
-    endDate: string;
-    completed: boolean;
-    order: number;
-    projectId: number;
-};
+import type { Project } from '@/types/task';
 
 export default function Home() {
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -62,14 +44,19 @@ export default function Home() {
 
     return (
         <TaskProvider onTasksChanged={handleTasksChanged}>
-            <main className="flex h-screen overflow-hidden">
+            {/* header */}
+            <header className="flex items-center justify-between p-6 text-black">
+                <h1 className="text-2xl font-semibold">Gantt Task Planner</h1>
+            </header>
+
+            <main className="flex grow overflow-hidden">
                 {/* Sidebar */}
-                <div className="w-96 border-r h-full overflow-y-auto bg-gray-50">
+                <div className="w-96 flex flex-col overflow-y-auto ml-6 mr-3 mb-4">
                     <ProjectList onSelectProject={handleSelectProject} />
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 h-full overflow-hidden">
+                <div className="flex-1 overflow-hidden mb-4 ml-3 mr-6 border border-neutral-200 rounded-xl bg-white">
                     <GanttChart
                         project={selectedProject}
                         onTasksChanged={handleTasksChanged}

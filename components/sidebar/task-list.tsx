@@ -142,7 +142,7 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
     };
 
     return (
-        <div className="p-4">
+        <div className="">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">Tasks</h3>
                 <Button

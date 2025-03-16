@@ -5,8 +5,8 @@ import { Inter } from 'next/font/google'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-    title: 'Gantt Chart Project',
-    description: 'A Next.js application for managing projects with Gantt charts',
+    title: 'Gantt Task Planner',
+    description: 'Managing tasks and proejcts with Gantt charts',
 }
 
 export default function RootLayout({
@@ -16,7 +16,7 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
-            <body className={inter.className}>{children}</body>
+            <body className={`${inter.className} bg-neutral-50 flex flex-col h-screen`}>{children}</body>
         </html>
     )
 }

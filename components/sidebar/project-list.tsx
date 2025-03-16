@@ -289,7 +289,7 @@ export function ProjectList({
 
     return (
         <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between p-4">
+            <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Projects</h2>
                 <Button
                     size="sm"
@@ -307,16 +307,16 @@ export function ProjectList({
                 />
             )}
 
-            <div className="space-y-2 px-3 grow overflow-auto">
+            <div className="space-y-2 overflow-auto mb-10">
                 {/* All Projects option */}
                 <Card
-                    className={`cursor-pointer ${isAllProjectsView ? "border-2 border-primary" : ""}`}
+                    className={`cursor-pointer ${isAllProjectsView ? "bg-black text-white shadow-none" : "shadow-none hover:border-neutral-300 hover:shadow-sm transition"}`}
                     onClick={handleSelectAllProjects}
                 >
-                    <CardHeader className="p-3 pb-1">
+                    <CardHeader className="p-4">
                         <div className="flex items-center">
                             <CardTitle className="text-base flex items-center">
-                                <Layers className="h-4 w-4 mr-2" />
+                                <Layers className="h-4 w-4 mr-3" />
                                 All Projects
                             </CardTitle>
                         </div>
@@ -326,12 +326,6 @@ export function ProjectList({
                     </CardHeader>
                 </Card>
 
-                {/* Divider */}
-                <div className="border-t border-gray-100 my-5" />
-
-                {loading && !isAllProjectsView && (
-                    <p className="text-center py-4">Loading projects...</p>
-                )}
                 {error && <p className="text-center text-red-500 py-4">{error}</p>}
                 {!loading && !error && projects.length === 0 && (
                     <p className="text-center text-gray-500 py-4">
@@ -342,14 +336,14 @@ export function ProjectList({
                     projects.map((project) => (
                         <Card
                             key={project.id}
-                            className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? "border-2 border-primary" : ""}`}
+                            className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? "bg-black text-white shadow-none" : "shadow-none hover:border-neutral-300 hover:shadow-sm transition"}`}
                             onClick={() => handleSelectProject(project)}
                         >
-                            <CardHeader className="p-3 pb-1">
+                            <CardHeader className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center">
                                         <div
-                                            className="w-3 h-3 rounded-full mr-2"
+                                            className="w-3 h-3 rounded-full mr-3"
                                             style={{ backgroundColor: project.color }}
                                         />
                                         <CardTitle className="text-base">{project.name}</CardTitle>
@@ -382,7 +376,7 @@ export function ProjectList({
                                     {project.description || "No description"}
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent className="p-3 pt-0">
+                            <CardContent className="pt-0 p-0 px-4 pb-4">
                                 <div className="text-xs text-gray-500">
                                     {project.tasks.length} tasks
                                 </div>
