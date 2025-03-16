@@ -2,13 +2,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
     Card,
-    CardContent,
-    CardHeader,
-    CardTitle
+    CardContent
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Check, X } from 'lucide-react';
-import { TaskEditModal } from '@/components/modals/task-edit-modal';
+import { Plus } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { useTaskContext } from '@/contexts/task-context';
