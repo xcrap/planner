@@ -1,4 +1,4 @@
-# Gantt Chart Project
+# Gantt Chart Task Manager
 
 A Next.js application for managing projects and tasks with a Gantt chart view.
 
