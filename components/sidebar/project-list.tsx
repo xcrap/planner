@@ -1,58 +1,111 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
     Card,
     CardContent,
     CardDescription,
     CardHeader,
-    CardTitle
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Plus, Layers } from 'lucide-react';
-import { ProjectForm } from '@/components/sidebar/project-form';
-import { TaskList } from '@/components/sidebar/task-list';
-import { AllTasksList } from '@/components/sidebar/all-tasks-list';
-import { Task, Project } from '@/types/task';
+    CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus, Layers } from "lucide-react";
+import { ProjectForm } from "@/components/sidebar/project-form";
+import { TaskList } from "@/components/sidebar/task-list";
+import { AllTasksList } from "@/components/sidebar/all-tasks-list";
+import type { Task, Project } from "@/types/task";
 
-export function ProjectList({ onSelectProject }: { onSelectProject: (project: Project) => void }) {
+export function ProjectList({
+    onSelectProject,
+}: { onSelectProject: (project: Project) => void }) {
     const [projects, setProjects] = useState<Project[]>([]);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [isAddingProject, setIsAddingProject] = useState(false);
     const [isEditingProject, setIsEditingProject] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isAllProjectsView, setIsAllProjectsView] = useState(true); // Default to true
+    const [isAllProjectsView, setIsAllProjectsView] = useState(true);
     const [allTasks, setAllTasks] = useState<Task[]>([]);
 
-    useEffect(() => {
-        fetchProjects();
-    }, []);
+    // Use refs to track state without causing re-renders
+    const initialLoadDone = useRef(false);
+    const isLoading = useRef(false);
+    const isSelectingProject = useRef(false);
 
-    // Add a new effect to select "All Projects" view by default on initialization
-    useEffect(() => {
-        if (!loading && !error && projects.length > 0 && isAllProjectsView) {
-            // Create a virtual "All Projects" object and pass to the parent
-            const allProjectsView = {
-                id: -1, // Special ID for "All Projects"
-                name: "All Projects",
-                description: "Tasks from all projects",
-                color: '', // Indigo color
-                tasks: allTasks
-            };
+    // Simplified fetchAllTasks that doesn't trigger further state updates
+    const fetchAllTasks = useCallback(async () => {
+        if (isLoading.current || !isAllProjectsView) return;
 
-            // Fetch all tasks for the default view
-            fetchAllTasks();
+        isLoading.current = true;
+        try {
+            // Get all projects and extract tasks
+            const projects = await Promise.all(
+                (await fetch("/api/projects").then((res) => res.json())).map(
+                    async (project: Project) => {
+                        const details = await fetch(`/api/projects/${project.id}`).then(
+                            (res) => res.json(),
+                        );
+                        return {
+                            ...details,
+                            tasks: details.tasks ? details.tasks.map((task: Task) => ({
+                                ...task,
+                                projectName: project.name,
+                                projectColor: project.color,
+                            })) : [],
+                        };
+                    },
+                ),
+            );
 
-            // Pass to parent
-            onSelectProject(allProjectsView);
+            // Collect all tasks from all projects
+            const tasks: Task[] = [];
+            for (const project of projects) {
+                if (project.tasks && Array.isArray(project.tasks)) {
+                    tasks.push(...project.tasks);
+                }
+            }
+
+            // Sort tasks
+            tasks.sort((a, b) => {
+                if (a.completed !== b.completed) {
+                    return a.completed ? 1 : -1;
+                }
+                return (
+                    new Date(a.startDate).getTime() - new Date(b.startDate).getTime()
+                );
+            });
+
+            setAllTasks(tasks);
+
+            if (isAllProjectsView && !isSelectingProject.current) {
+                const allProjectsView = {
+                    id: -1,
+                    name: "All Projects",
+                    description: "Tasks from all projects",
+                    color: "",
+                    tasks: tasks,
+                };
+                // Use setTimeout to break the synchronous cycle
+                setTimeout(() => {
+                    onSelectProject(allProjectsView);
+                }, 0);
+            }
+        } catch (error) {
+            console.error("Error fetching all tasks:", error);
+            setAllTasks([]);
+        } finally {
+            isLoading.current = false;
+            setLoading(false);
         }
-    }, [loading, projects]); // Run this effect when projects are loaded
+    }, [isAllProjectsView, onSelectProject]);
 
-    const fetchProjects = async () => {
+    const fetchProjects = useCallback(async () => {
+        if (isLoading.current) return;
+
+        isLoading.current = true;
         setLoading(true);
         setError(null);
 
         try {
-            const response = await fetch('/api/projects');
+            const response = await fetch("/api/projects");
 
             if (!response.ok) {
                 throw new Error(`API error: ${response.status}`);
@@ -61,72 +114,53 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
             const data = await response.json();
 
             // Check if data is an array, if not, look for projects property
-            const projectsArray = Array.isArray(data) ? data :
-                (data.projects && Array.isArray(data.projects) ? data.projects : []);
+            const projectsArray = Array.isArray(data)
+                ? data
+                : data.projects && Array.isArray(data.projects)
+                    ? data.projects
+                    : [];
 
             setProjects(projectsArray);
-
-            // If we're in All Projects view, also fetch tasks right away
-            if (isAllProjectsView) {
-                fetchAllTasks();
-            }
-
         } catch (error) {
-            console.error('Error fetching projects:', error);
-            setError('Failed to load projects. Please try again.');
+            console.error("Error fetching projects:", error);
+            setError("Failed to load projects. Please try again.");
             setProjects([]);
         } finally {
-            setLoading(false); // Make sure to always set loading to false when done
+            isLoading.current = false;
+            setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchAllTasks = async () => {
-        try {
-            // Get all projects and extract tasks
-            const projects = await Promise.all(
-                (await fetch('/api/projects').then(res => res.json()))
-                    .map(async (project: Project) => {
-                        const details = await fetch(`/api/projects/${project.id}`).then(res => res.json());
-                        return {
-                            ...details,
-                            tasks: details.tasks.map((task: Task) => ({
-                                ...task,
-                                projectName: project.name,
-                                projectColor: project.color
-                            }))
-                        };
-                    })
-            );
+    // Initial load effect - only run once
+    useEffect(() => {
+        fetchProjects();
+    }, [fetchProjects]);
 
-            // Collect all tasks from all projects
-            const tasks: Task[] = [];
-            projects.forEach(project => {
-                if (project.tasks && Array.isArray(project.tasks)) {
-                    tasks.push(...project.tasks);
-                }
-            });
-
-            // Sort tasks
-            tasks.sort((a, b) => {
-                if (a.completed !== b.completed) {
-                    return a.completed ? 1 : -1;
-                }
-                return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
-            });
-
-            setAllTasks(tasks);
-            setLoading(false); // Ensure loading is set to false when tasks are ready
-        } catch (error) {
-            console.error('Error fetching all tasks:', error);
-            setAllTasks([]);
-            setLoading(false); // Make sure to always set loading to false when done
+    // Effect to load all tasks on initial load - using a ref to prevent dependency issues
+    const didRunLoadEffect = useRef(false);
+    useEffect(() => {
+        if (projects.length > 0 && isAllProjectsView && !initialLoadDone.current && !isLoading.current && !didRunLoadEffect.current) {
+            didRunLoadEffect.current = true;
+            initialLoadDone.current = true;
+            fetchAllTasks();
         }
-    };
+    }, [projects.length, isAllProjectsView, fetchAllTasks]);
 
     const handleSelectProject = async (project: Project) => {
+        if (isSelectingProject.current) return;
+        isSelectingProject.current = true;
+
         setIsAllProjectsView(false);
 
         try {
+            if (project.id === -1) {
+                // Special case for "All Projects"
+                setIsAllProjectsView(true);
+                setSelectedProject(null);
+                isSelectingProject.current = false;
+                return;
+            }
+
             // Fetch the latest project data including tasks
             const response = await fetch(`/api/projects/${project.id}`);
 
@@ -141,43 +175,51 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
             setSelectedProject(freshProject);
 
             // Update the projects array with the fresh project data
-            setProjects(projects.map(p =>
-                p.id === freshProject.id ? freshProject : p
-            ));
+            setProjects(projects =>
+                projects.map((p) => (p.id === freshProject.id ? freshProject : p))
+            );
 
             // Pass fresh project data to parent
             onSelectProject(freshProject);
         } catch (error) {
-            console.error('Error fetching project details:', error);
+            console.error("Error fetching project details:", error);
             // Fallback to using cached data if fetch fails
             setSelectedProject(project);
             onSelectProject(project);
+        } finally {
+            isSelectingProject.current = false;
         }
     };
 
     const handleSelectAllProjects = () => {
+        if (isAllProjectsView) return; // Don't do anything if already in All Projects view
+
         setIsAllProjectsView(true);
         setSelectedProject(null);
-        fetchAllTasks();
 
-        // Create a virtual "All Projects" object to pass to the parent
+        // Create a virtual "All Projects" object with current tasks
         const allProjectsView = {
-            id: -1, // Special ID for "All Projects"
+            id: -1,
             name: "All Projects",
             description: "Tasks from all projects",
-            color: '', // Indigo color
-            tasks: allTasks
+            color: "",
+            tasks: allTasks,
         };
 
         onSelectProject(allProjectsView);
+
+        // Fetch latest tasks asynchronously
+        setTimeout(() => {
+            fetchAllTasks();
+        }, 0);
     };
 
-    const handleAddProject = async (project: Omit<Project, 'id' | 'tasks'>) => {
+    const handleAddProject = async (project: Omit<Project, "id" | "tasks">) => {
         try {
-            const response = await fetch('/api/projects', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(project)
+            const response = await fetch("/api/projects", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(project),
             });
 
             if (response.ok) {
@@ -187,16 +229,18 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                 throw new Error(`API error: ${response.status}`);
             }
         } catch (error) {
-            console.error('Error adding project:', error);
+            console.error("Error adding project:", error);
         }
     };
 
-    const handleUpdateProject = async (project: Partial<Project> & { id: number }) => {
+    const handleUpdateProject = async (
+        project: Partial<Project> & { id: number },
+    ) => {
         try {
             const response = await fetch(`/api/projects/${project.id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(project)
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(project),
             });
 
             if (response.ok) {
@@ -206,16 +250,16 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                 throw new Error(`API error: ${response.status}`);
             }
         } catch (error) {
-            console.error('Error updating project:', error);
+            console.error("Error updating project:", error);
         }
     };
 
     const handleDeleteProject = async (projectId: number) => {
-        if (!confirm('Are you sure you want to delete this project?')) return;
+        if (!confirm("Are you sure you want to delete this project?")) return;
 
         try {
             const response = await fetch(`/api/projects/${projectId}`, {
-                method: 'DELETE'
+                method: "DELETE",
             });
 
             if (response.ok) {
@@ -227,23 +271,21 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                 throw new Error(`API error: ${response.status}`);
             }
         } catch (error) {
-            console.error('Error deleting project:', error);
+            console.error("Error deleting project:", error);
         }
     };
 
+    // Streamlined event listener for task changes
     useEffect(() => {
         const refreshAllTasks = () => {
-            if (isAllProjectsView) {
-                fetchAllTasks();
+            if (isAllProjectsView && !isLoading.current) {
+                setTimeout(() => fetchAllTasks(), 100); // Add slight delay to prevent race conditions
             }
         };
 
-        window.addEventListener('tasks-changed', refreshAllTasks);
-
-        return () => {
-            window.removeEventListener('tasks-changed', refreshAllTasks);
-        };
-    }, [isAllProjectsView]);
+        window.addEventListener("tasks-changed", refreshAllTasks);
+        return () => window.removeEventListener("tasks-changed", refreshAllTasks);
+    }, [isAllProjectsView, fetchAllTasks]);
 
     return (
         <div className="h-full flex flex-col">
@@ -268,7 +310,7 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
             <div className="space-y-2 px-3 grow overflow-auto">
                 {/* All Projects option */}
                 <Card
-                    className={`cursor-pointer ${isAllProjectsView ? 'border-2 border-primary' : ''}`}
+                    className={`cursor-pointer ${isAllProjectsView ? "border-2 border-primary" : ""}`}
                     onClick={handleSelectAllProjects}
                 >
                     <CardHeader className="p-3 pb-1">
@@ -285,63 +327,68 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                 </Card>
 
                 {/* Divider */}
-                <div className="border-t border-gray-200 my-2"></div>
+                <div className="border-t border-gray-100 my-5" />
 
-                {loading && !isAllProjectsView && <p className="text-center py-4">Loading projects...</p>}
+                {loading && !isAllProjectsView && (
+                    <p className="text-center py-4">Loading projects...</p>
+                )}
                 {error && <p className="text-center text-red-500 py-4">{error}</p>}
                 {!loading && !error && projects.length === 0 && (
-                    <p className="text-center text-gray-500 py-4">No projects found. Create one to get started!</p>
+                    <p className="text-center text-gray-500 py-4">
+                        No projects found. Create one to get started!
+                    </p>
                 )}
-                {Array.isArray(projects) && projects.map(project => (
-                    <Card
-                        key={project.id}
-                        className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? 'border-2 border-primary' : ''}`}
-                        onClick={() => handleSelectProject(project)}
-                    >
-                        <CardHeader className="p-3 pb-1">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <div
-                                        className="w-3 h-3 rounded-full mr-2"
-                                        style={{ backgroundColor: project.color }}
-                                    />
-                                    <CardTitle className="text-base">{project.name}</CardTitle>
+                {Array.isArray(projects) &&
+                    projects.map((project) => (
+                        <Card
+                            key={project.id}
+                            className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? "border-2 border-primary" : ""}`}
+                            onClick={() => handleSelectProject(project)}
+                        >
+                            <CardHeader className="p-3 pb-1">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center">
+                                        <div
+                                            className="w-3 h-3 rounded-full mr-2"
+                                            style={{ backgroundColor: project.color }}
+                                        />
+                                        <CardTitle className="text-base">{project.name}</CardTitle>
+                                    </div>
+                                    <div className="flex space-x-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsEditingProject(true);
+                                                setSelectedProject(project);
+                                            }}
+                                        >
+                                            Edit
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteProject(project.id);
+                                            }}
+                                        >
+                                            Delete
+                                        </Button>
+                                    </div>
                                 </div>
-                                <div className="flex space-x-1">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setIsEditingProject(true);
-                                            setSelectedProject(project);
-                                        }}
-                                    >
-                                        Edit
-                                    </Button>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteProject(project.id);
-                                        }}
-                                    >
-                                        Delete
-                                    </Button>
+                                <CardDescription className="truncate text-xs">
+                                    {project.description || "No description"}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="p-3 pt-0">
+                                <div className="text-xs text-gray-500">
+                                    {project.tasks.length} tasks
                                 </div>
-                            </div>
-                            <CardDescription className="truncate text-xs">
-                                {project.description || 'No description'}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="p-3 pt-0">
-                            <div className="text-xs text-gray-500">
-                                {project.tasks.length} tasks
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
+                            </CardContent>
+                        </Card>
+                    ))}
             </div>
 
             {isEditingProject && selectedProject && (
@@ -349,8 +396,12 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                     project={selectedProject}
                     onSubmit={(project) => {
                         // Create a wrapper that ensures id is properly handled
-                        const projectWithId = project.id ? project : { ...project, id: selectedProject.id };
-                        return handleUpdateProject(projectWithId as Partial<Project> & { id: number });
+                        const projectWithId = project.id
+                            ? project
+                            : { ...project, id: selectedProject.id };
+                        return handleUpdateProject(
+                            projectWithId as Partial<Project> & { id: number },
+                        );
                     }}
                     onCancel={() => setIsEditingProject(false)}
                 />
@@ -367,10 +418,7 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
 
             {isAllProjectsView && (
                 <div className="mt-4">
-                    <AllTasksList
-                        tasks={allTasks}
-                        onTasksChanged={fetchAllTasks}
-                    />
+                    <AllTasksList tasks={allTasks} onTasksChanged={fetchAllTasks} />
                 </div>
             )}
         </div>
