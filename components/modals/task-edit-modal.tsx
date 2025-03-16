@@ -1,14 +1,9 @@
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { useTaskContext } from "@/contexts/task-context"
-import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useTaskContext } from "@/contexts/task-context";
+import { useState, useEffect } from "react";
 
 export function TaskEditModal() {
     const { selectedTask, setSelectedTask, handleTaskUpdate, handleTaskDelete } = useTaskContext();
@@ -22,15 +17,17 @@ export function TaskEditModal() {
     useEffect(() => {
         if (selectedTask) {
             setFormData({
-                name: selectedTask.name,
+                name: selectedTask.name || '',
                 description: selectedTask.description || '',
-                startDate: selectedTask.startDate,
-                endDate: selectedTask.endDate,
+                startDate: selectedTask.startDate || new Date().toISOString().split('T')[0],
+                endDate: selectedTask.endDate || new Date().toISOString().split('T')[0],
             });
         }
     }, [selectedTask]);
 
     if (!selectedTask) return null;
+
+    const isNewTask = selectedTask.id === 0;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,7 +41,7 @@ export function TaskEditModal() {
         <Dialog open={!!selectedTask} onOpenChange={() => setSelectedTask(null)}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Edit Task</DialogTitle>
+                    <DialogTitle>{isNewTask ? 'Add Task' : 'Edit Task'}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
