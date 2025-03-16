@@ -3,7 +3,7 @@ import { addDays, format, differenceInDays, parseISO, isWeekend } from 'date-fns
 import { TaskBar } from '@/components/gantt/task-bar';
 import { Timeline } from '@/components/gantt/timeline';
 import { useTaskContext } from '@/contexts/task-context';
-import { Task, Project } from '@/types/task';
+import type { Task, Project } from '@/types/task';
 
 type GanttChartProps = {
     project: Project | null;
@@ -475,11 +475,11 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                     <Timeline timeRange={timeRange} dayWidth={dayWidth} />
 
                     {/* Day columns that span the entire task area */}
-                    <div className="absolute left-48 right-0 top-[60px] bottom-0 z-0">
+                    <div className="absolute left-60 right-0 top-[60px] bottom-0 z-0">
                         {timeRange.map((date, i) => {
                             const isCurrentDay = isDateToday(date);
                             // Today's styling takes precedence over weekend styling
-                            const bgColorClass = isCurrentDay ? 'bg-blue-50' : (isWeekend(date) ? 'bg-gray-50' : '');
+                            const bgColorClass = isCurrentDay ? 'bg-yellow-50' : (isWeekend(date) ? 'bg-neutral-50' : '');
 
                             return (
                                 <div
@@ -495,10 +495,9 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                         {/* Today indicator line that spans entire chart */}
                         {todayOffset !== undefined && (
                             <div
-                                className="absolute top-[10px] bottom-0 w-[2px] bg-blue-500 z-5"
+                                className="absolute top-0 bottom-0 w-[2px] bg-yellow-500/30 z-5"
                                 style={{
                                     left: `${(todayOffset * dayWidth) + (dayWidth / 2)}px`, // Center in column
-                                    opacity: 0.4
                                 }}
                             />
                         )}

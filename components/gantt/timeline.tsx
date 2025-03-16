@@ -31,29 +31,29 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
     };
 
     return (
-        <div className="sticky top-0 bg-white z-10 border-b border-gray-200">
+        <div className="sticky top-0 bg-white z-10 border-b border-neutral-200">
             <div className="flex">
                 {/* Empty space for task names */}
-                <div className="w-48 shrink-0 border-r border-gray-200" />
+                <div className="w-60 shrink-0 border-r border-neutral-200" />
 
                 {/* Days */}
                 <div className="flex">
                     {timeRange.map((date, i) => {
                         const isCurrentDay = isDateToday(date);
                         // Today's styling takes precedence over weekend styling
-                        const bgColorClass = isCurrentDay ? 'bg-blue-50' : (isWeekend(date) ? 'bg-gray-50' : '');
+                        const bgColorClass = isCurrentDay ? 'bg-yellow-50' : (isWeekend(date) ? 'bg-neutral-50' : '');
 
                         return (
                             <div
                                 key={i}
-                                className={`flex flex-col items-center justify-center border-r ${i === 0 ? 'border-l' : ''} border-gray-200 
-                                    ${bgColorClass} ${isCurrentDay ? 'border-blue-300' : ''}`}
+                                className={`flex flex-col items-center justify-center border-r border-neutral-200 
+                                    ${bgColorClass} ${isCurrentDay ? 'border-yellow-200' : ''}`}
                                 style={{ width: `${dayWidth}px`, height: '60px' }}
                             >
-                                <div className={`text-xs font-medium ${isCurrentDay ? 'text-blue-700' : ''}`}>
+                                <div className={`text-xs ${isCurrentDay ? 'text-yellow-700' : ''}`}>
                                     {getUTCDayOfWeek(date)}
                                 </div>
-                                <div className={`text-sm font-bold ${isCurrentDay ? 'text-blue-700' : ''}`}>
+                                <div className={`text-xs font-bold mt-0.5  ${isCurrentDay ? 'text-yellow-700' : ''}`}>
                                     {formatUTCDate(date, 'month')} {formatUTCDate(date, 'day')}
                                 </div>
                             </div>

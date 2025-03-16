@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Task } from '@/types/task';
+import type { Task } from '@/types/task';
 
 type TaskBarProps = {
     task: Task;
@@ -172,17 +172,17 @@ export function TaskBar({
     const showResizeHandles = isHovering || isResizing;
 
     return (
-        <div className="relative flex items-center h-14 mb-1 group border-b border-gray-200">
-            <div className="px-4 w-48 truncate font-medium">
+        <div className="relative flex items-center h-16 mb-1 group border-b border-gray-200">
+            <div className="px-4 w-60 truncate font-medium text-base">
                 {/* Show project name when in All Projects view */}
                 {isAllProjectsView ? (
-                    <div className="flex flex-col">
+                    <div className="flex flex-col space-y-1">
                         <span>{task.name}</span>
-                        <span className="text-xs text-gray-500 flex items-center">
+                        <span className="text-xs text-neutral-500 flex items-center">
                             <span
                                 className="inline-block w-2 h-2 rounded-full mr-1"
                                 style={{ backgroundColor: projectColor }}
-                            ></span>
+                            />
                             {task.projectName || `Project #${task.projectId}`}
                         </span>
                     </div>
@@ -193,11 +193,14 @@ export function TaskBar({
 
             <div
                 ref={barRef}
-                className={`relative rounded-md border border-gray-400 text-white px-2 py-1 flex items-center h-10 z-10
+                className={`relative rounded-full text-white px-4 py-1 flex items-center h-10 z-10
                     ${isResizing ? 'ring-2 ring-blue-400' : ''}`}
                 style={getTaskStyle()}
                 onMouseDown={handleDragStart}
                 onClick={handleClick}
+                onKeyDown={(e) => {
+                    e.preventDefault();
+                }}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
             >
@@ -206,26 +209,21 @@ export function TaskBar({
                     <div
                         className={`absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
                             ${(isResizing && resizeEdge === 'start') || hoverEdge === 'start'
-                                ? 'bg-blue-400 opacity-50 w-4 -ml-1 rounded-l-md'
-                                : 'hover:bg-blue-400 hover:opacity-30'}`}
+                                ? 'bg-black/20 w-4 -ml-1 rounded-l-full'
+                                : 'opacity-0 hover:opacity-100'}`}
                         onMouseDown={(e) => handleResizeStart(e, 'start')}
                         onMouseEnter={() => handleResizeHover('start')}
                         onMouseLeave={() => handleResizeHover(null)}
                     >
                         {/* Visual grip for resize handle */}
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="h-4 border-l border-r border-white opacity-70 mx-[3px]"></div>
+                            <div className="h-4 border-l border-r border-white opacity-70 ml-[6px]" />
                         </div>
                     </div>
                 )}
 
                 <span className="truncate text-sm select-none">
-                    {task.name} ({startDateDisplay} - {endDateDisplay})
-                    {isAllProjectsView && (
-                        <span className="ml-1 opacity-75">
-                            · {task.projectName || `Project #${task.projectId}`}
-                        </span>
-                    )}
+                    {task.name}
                 </span>
 
                 {/* Resize handle - right edge */}
@@ -233,15 +231,15 @@ export function TaskBar({
                     <div
                         className={`absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
                             ${(isResizing && resizeEdge === 'end') || hoverEdge === 'end'
-                                ? 'bg-blue-400 opacity-50 w-4 -mr-1 rounded-r-md'
-                                : 'hover:bg-blue-400 hover:opacity-30'}`}
+                                ? 'bg-black/20 w-4 -mr-1 rounded-r-full'
+                                : 'opacity-0 hover:opacity-100'}`}
                         onMouseDown={(e) => handleResizeStart(e, 'end')}
                         onMouseEnter={() => handleResizeHover('end')}
                         onMouseLeave={() => handleResizeHover(null)}
                     >
                         {/* Visual grip for resize handle */}
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="h-4 border-l border-r border-white opacity-70 mx-[3px]"></div>
+                            <div className="h-4 border-l border-r border-white opacity-70 mr-[6px]" />
                         </div>
                     </div>
                 )}
