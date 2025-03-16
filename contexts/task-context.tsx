@@ -25,8 +25,12 @@ export function TaskProvider({ children, onTasksChanged }: { children: ReactNode
 
     const handleTaskUpdate = async (task: Task) => {
         try {
-            const response = await fetch(`/api/tasks/${task.id}`, {
-                method: 'PUT',
+            const isNewTask = !task.id;
+            const url = isNewTask ? '/api/tasks' : `/api/tasks/${task.id}`;
+            const method = isNewTask ? 'POST' : 'PUT';
+
+            const response = await fetch(url, {
+                method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(task)
             });

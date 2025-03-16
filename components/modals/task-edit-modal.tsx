@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,20 +14,27 @@ export function TaskEditModal() {
         endDate: '',
     });
 
+    // Helper function to format dates
+    const formatDate = (dateString: string) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toISOString().split('T')[0];
+    };
+
     useEffect(() => {
         if (selectedTask) {
             setFormData({
                 name: selectedTask.name || '',
                 description: selectedTask.description || '',
-                startDate: selectedTask.startDate || new Date().toISOString().split('T')[0],
-                endDate: selectedTask.endDate || new Date().toISOString().split('T')[0],
+                startDate: formatDate(selectedTask.startDate),
+                endDate: formatDate(selectedTask.endDate),
             });
         }
     }, [selectedTask]);
 
     if (!selectedTask) return null;
 
-    const isNewTask = selectedTask.id === 0;
+    const isNewTask = !selectedTask.id || selectedTask.id === 0;
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -42,6 +49,9 @@ export function TaskEditModal() {
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>{isNewTask ? 'Add Task' : 'Edit Task'}</DialogTitle>
+                    <DialogDescription>
+                        {isNewTask ? 'Create a new task' : 'Edit the details of your task'}
+                    </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">

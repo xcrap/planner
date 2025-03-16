@@ -191,26 +191,18 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         const today = new Date();
         const tomorrow = addDays(today, 1);
 
-        try {
-            const response = await fetch('/api/tasks', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    name: 'New Task',
-                    description: '',
-                    startDate: format(today, 'yyyy-MM-dd'),
-                    endDate: format(tomorrow, 'yyyy-MM-dd'),
-                    completed: false,
-                    projectId: project.id
-                })
-            });
-
-            const newTask = await response.json();
-            onTasksChanged();
-            setSelectedTask(newTask);
-        } catch (error) {
-            console.error('Error creating task:', error);
-        }
+        const newTask = {
+            id: undefined, // Changed from not setting id at all
+            name: 'New Task',
+            description: '',
+            startDate: format(today, 'yyyy-MM-dd'),
+            endDate: format(tomorrow, 'yyyy-MM-dd'),
+            completed: false,
+            projectId: project.id,
+            order: project.tasks.length // Add order to maintain consistency
+        };
+        
+        setSelectedTask(newTask as Task); // Cast to Task since we know this is a new task
     };
 
     if (!project) {
