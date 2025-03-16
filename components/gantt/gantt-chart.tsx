@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { addDays, format, differenceInDays, parseISO, isWeekend } from 'date-fns';
 import { TaskBar } from '@/components/gantt/task-bar';
 import { Timeline } from '@/components/gantt/timeline';
@@ -34,7 +34,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
     const [allProjects, setAllProjects] = useState<Project[]>([]);
 
     // Add a function to fetch all projects when in "All Projects" view
-    const fetchAllProjects = async () => {
+    const fetchAllProjects = useCallback(async () => {
         if (!isAllProjectsView) return;
 
         try {
@@ -52,14 +52,14 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             console.error('Error fetching all projects:', error);
             setAllProjects([]);
         }
-    };
+    }, [isAllProjectsView]);
 
     // Immediately fetch all projects when component mounts or when refreshed
     useEffect(() => {
         if (isAllProjectsView || !project) {
             fetchAllProjects();
         }
-    }, [isAllProjectsView, project]);
+    }, [isAllProjectsView, project, fetchAllProjects]);
 
     // Normalize date to UTC
     const normalizeToUTCDate = (date: string) => {
@@ -83,7 +83,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         return () => {
             window.removeEventListener('refresh-gantt', handleRefreshGantt);
         };
-    }, [onTasksChanged, isAllProjectsView, fetchAllProjects]);
+    }, [onTasksChanged, isAllProjectsView, fetchAllProjects, normalizeToUTCDate]);
 
     // Modify the timeRange calculation to include tasks from all projects when in "All Projects" view
     useEffect(() => {
@@ -186,7 +186,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         if (timeRange.length > 0) {
             // console.log(`Chart width calculation: ${timeRange.length} days × ${dayWidth}px + 200px = ${timeRange.length * dayWidth + 200}px`);
         }
-    }, [timeRange, dayWidth]);
+    }, [timeRange]);
 
     const handleTaskDragStart = (taskId: number) => {
         setDraggingTaskId(taskId);
@@ -443,6 +443,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                 <h2 className="text-xl font-bold">{project.name}</h2>
                 <div className="flex items-center space-x-4">
                     <button
+                        type="button"
                         onClick={handleAddTask}
                         className="bg-blue-600 text-white py-1 px-3 rounded hover:bg-blue-700"
                     >
@@ -450,12 +451,14 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                     </button>
                     <div className="flex items-center space-x-2">
                         <button
+                            type="button"
                             onClick={() => setDayWidth(prev => Math.max(30, prev - 10))}
                             className="p-1 rounded hover:bg-gray-200"
                         >
                             Zoom Out
                         </button>
                         <button
+                            type="button"
                             onClick={() => setDayWidth(prev => Math.min(120, prev + 10))}
                             className="p-1 rounded hover:bg-gray-200"
                         >
