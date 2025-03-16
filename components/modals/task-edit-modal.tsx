@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTaskContext } from "@/contexts/task-context";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -56,7 +56,7 @@ export function TaskEditModal() {
     };
 
     // Fetch all projects for the dropdown
-    const fetchProjects = async () => {
+    const fetchProjects = useCallback(async () => {
         try {
             const response = await fetch('/api/projects');
             if (response.ok) {
@@ -68,12 +68,12 @@ export function TaskEditModal() {
         } catch (error) {
             console.error('Error fetching projects:', error);
         }
-    };
+    }, []);
 
     useEffect(() => {
         // Fetch projects when the component mounts
         fetchProjects();
-    }, []);
+    }, [fetchProjects]);
 
     useEffect(() => {
         if (!selectedTask) return;
