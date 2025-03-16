@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTaskContext } from "@/contexts/task-context";
 import { useState, useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export function TaskEditModal() {
     const { selectedTask, setSelectedTask, handleTaskUpdate, handleTaskDelete } = useTaskContext();
@@ -12,6 +13,7 @@ export function TaskEditModal() {
         description: '',
         startDate: '',
         endDate: '',
+        completed: false,
     });
 
     // Helper function to format dates
@@ -28,6 +30,7 @@ export function TaskEditModal() {
                 description: selectedTask.description || '',
                 startDate: formatDate(selectedTask.startDate),
                 endDate: formatDate(selectedTask.endDate),
+                completed: selectedTask.completed,
             });
         }
     }, [selectedTask]);
@@ -89,6 +92,16 @@ export function TaskEditModal() {
                                 onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
                             />
                         </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox
+                            id="completed"
+                            checked={formData.completed}
+                            onCheckedChange={(checked) => 
+                                setFormData(prev => ({ ...prev, completed: checked === true }))
+                            }
+                        />
+                        <Label htmlFor="completed">Mark as completed</Label>
                     </div>
                     <div className="flex justify-end gap-2">
                         <Button 
