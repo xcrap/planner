@@ -181,6 +181,13 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         setTimeRange(range);
     }, [project, isAllProjectsView, allProjects]);
 
+    // Add this useEffect to log and monitor the width calculation
+    useEffect(() => {
+        if (timeRange.length > 0) {
+            console.log(`Chart width calculation: ${timeRange.length} days × ${dayWidth}px + 200px = ${timeRange.length * dayWidth + 200}px`);
+        }
+    }, [timeRange, dayWidth]);
+
     const handleTaskDragStart = (taskId: number) => {
         setDraggingTaskId(taskId);
         setDragPreviewOffset(0);
@@ -459,10 +466,12 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             </div>
 
             <div className="flex overflow-auto" ref={containerRef}>
-                <div className="relative flex flex-col min-w-full"
+                <div
+                    className="relative flex flex-col"
                     style={{
-                        width: `${timeRange.length * dayWidth + 200}px`,
-                    }}>
+                        width: `${Math.max(2000, timeRange.length * dayWidth + 200)}px`,
+                    }}
+                >
                     <Timeline timeRange={timeRange} dayWidth={dayWidth} />
 
                     {/* Day columns that span the entire task area */}
