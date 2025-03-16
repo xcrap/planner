@@ -45,6 +45,7 @@ export function TaskBar({
     const [initialX, setInitialX] = useState<number>(0);
     const [hasMovement, setHasMovement] = useState<boolean>(false);
     const [hoverEdge, setHoverEdge] = useState<'start' | 'end' | null>(null);
+    const [isHovering, setIsHovering] = useState<boolean>(false);
     const barRef = useRef<HTMLDivElement>(null);
 
     // The startOffset and duration props now include preview values from parent
@@ -93,6 +94,16 @@ export function TaskBar({
         if (!hasMovement) {
             onTaskClick(task);
         }
+    };
+
+    // Handle mouse enter/leave on task bar
+    const handleMouseEnter = () => {
+        setIsHovering(true);
+    };
+
+    const handleMouseLeave = () => {
+        setIsHovering(false);
+        setHoverEdge(null);
     };
 
     useEffect(() => {
@@ -157,6 +168,9 @@ export function TaskBar({
     const startDateDisplay = formatUTCDate(task.startDate);
     const endDateDisplay = formatUTCDate(task.endDate);
 
+    // Determine if resize handles should be visible
+    const showResizeHandles = isHovering || isResizing;
+
     return (
         <div className="relative flex items-center h-14 mb-1 group border-b border-gray-200">
             <div className="px-4 w-48 truncate font-medium">
@@ -184,22 +198,26 @@ export function TaskBar({
                 style={getTaskStyle()}
                 onMouseDown={handleDragStart}
                 onClick={handleClick}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
             >
                 {/* Resize handle - left edge */}
-                <div
-                    className={`absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
-                        ${(isResizing && resizeEdge === 'start') || hoverEdge === 'start'
-                            ? 'bg-blue-400 opacity-50 w-4 -ml-1 rounded-l-md'
-                            : 'hover:bg-blue-400 hover:opacity-30'}`}
-                    onMouseDown={(e) => handleResizeStart(e, 'start')}
-                    onMouseEnter={() => handleResizeHover('start')}
-                    onMouseLeave={() => handleResizeHover(null)}
-                >
-                    {/* Visual grip for resize handle */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-4 border-l border-r border-white opacity-70 mx-[3px]"></div>
+                {showResizeHandles && (
+                    <div
+                        className={`absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
+                            ${(isResizing && resizeEdge === 'start') || hoverEdge === 'start'
+                                ? 'bg-blue-400 opacity-50 w-4 -ml-1 rounded-l-md'
+                                : 'hover:bg-blue-400 hover:opacity-30'}`}
+                        onMouseDown={(e) => handleResizeStart(e, 'start')}
+                        onMouseEnter={() => handleResizeHover('start')}
+                        onMouseLeave={() => handleResizeHover(null)}
+                    >
+                        {/* Visual grip for resize handle */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-4 border-l border-r border-white opacity-70 mx-[3px]"></div>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 <span className="truncate text-sm select-none">
                     {task.name} ({startDateDisplay} - {endDateDisplay})
@@ -211,21 +229,22 @@ export function TaskBar({
                 </span>
 
                 {/* Resize handle - right edge */}
-                <div
-                    className={`absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
-                        ${(isResizing && resizeEdge === 'end') || hoverEdge === 'end'
-                            ? 'bg-blue-400 opacity-50 w-4 -mr-1 rounded-r-md'
-                            : 'hover:bg-blue-400 hover:opacity-30'}`}
-                    onMouseDown={(e) => handleResizeStart(e, 'end')}
-                    onMouseEnter={() => handleResizeHover('end')}
-                    onMouseLeave={() => handleResizeHover(null)}
-                >
-                    {/* Visual grip for resize handle */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-4 border-l border-r border-white opacity-70 mx-[3px]"></div>
+                {showResizeHandles && (
+                    <div
+                        className={`absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
+                            ${(isResizing && resizeEdge === 'end') || hoverEdge === 'end'
+                                ? 'bg-blue-400 opacity-50 w-4 -mr-1 rounded-r-md'
+                                : 'hover:bg-blue-400 hover:opacity-30'}`}
+                        onMouseDown={(e) => handleResizeStart(e, 'end')}
+                        onMouseEnter={() => handleResizeHover('end')}
+                        onMouseLeave={() => handleResizeHover(null)}
+                    >
+                        {/* Visual grip for resize handle */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-4 border-l border-r border-white opacity-70 mx-[3px]"></div>
+                        </div>
                     </div>
-                </div>
-
+                )}
             </div>
         </div>
     );
