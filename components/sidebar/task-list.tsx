@@ -33,7 +33,7 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
 
     const fetchTasks = useCallback(async () => {
         if (!projectId) return;
-        
+
         try {
             const response = await fetch(`/api/projects/${projectId}`);
             const project = await response.json();
@@ -60,11 +60,25 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
         fetchTasks();
     }, [fetchTasks, projectId]);
 
+    // Add this new effect to make component refetch when tasks might have changed
+    useEffect(() => {
+        // This event listener will allow other components to trigger a task refresh
+        const handleTasksChanged = () => {
+            fetchTasks();
+        };
+
+        window.addEventListener('tasks-changed', handleTasksChanged);
+
+        return () => {
+            window.removeEventListener('tasks-changed', handleTasksChanged);
+        };
+    }, [fetchTasks]);
+
     const handleAddClick = () => {
         // Create a new task with UTC dates
         const today = new Date();
         const utcToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-        
+
         const newTask = {
             id: 0, // This will be replaced by the server
             name: '',
@@ -103,7 +117,7 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
     // Normalize date to exact UTC without any timezone conversion
     const normalizeToUTCDate = (date: string) => {
         if (!date) return new Date();
-        
+
         // If it's already a date string in ISO format, parse it properly
         try {
             // Extract just the date part to avoid timezone issues
@@ -115,7 +129,7 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
             return new Date();
         }
     };
-    
+
     // Format date in UTC explicitly using standard JavaScript methods
     const formatUTCDate = (dateString: string) => {
         if (!dateString) return '';

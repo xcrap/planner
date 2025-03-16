@@ -28,6 +28,12 @@ type GanttChartProps = {
     onTasksChanged: () => void;
 };
 
+declare global {
+    interface Window {
+        currentProjectId?: number;
+    }
+}
+
 export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
     const [timeRange, setTimeRange] = useState<Date[]>([]);
     const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
@@ -46,6 +52,28 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         const d = new Date(date);
         return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     };
+
+    useEffect(() => {
+        // Add this at the beginning of the component to track the current project
+        if (project?.id) {
+            window.currentProjectId = project.id;
+        }
+
+        // Subscribe to refresh-gantt events
+        const handleRefreshGantt = () => {
+            onTasksChanged();
+        };
+
+        window.addEventListener('refresh-gantt', handleRefreshGantt);
+
+        return () => {
+            window.removeEventListener('refresh-gantt', handleRefreshGantt);
+            // Clean up the global reference when component unmounts
+            if (window.currentProjectId === project?.id) {
+                window.currentProjectId = undefined;
+            }
+        };
+    }, [project?.id, onTasksChanged]);
 
     useEffect(() => {
         if (!project || !project.tasks.length) {
@@ -215,6 +243,9 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             if (response.ok) {
                 // Make sure we call onTasksChanged to refresh the whole UI
                 onTasksChanged();
+
+                // Dispatch event to notify other components
+                window.dispatchEvent(new Event('tasks-changed'));
             }
         } catch (error) {
             console.error('Error updating task dates:', error);
@@ -286,7 +317,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         const today = new Date();
         return date.getUTCFullYear() === today.getFullYear() &&
             date.getUTCMonth() === today.getMonth() &&
-            date.getUTCDate() === today.getDate();
+            date.getUTCDate() === today.getUTCDate();
     };
 
     if (!project) {

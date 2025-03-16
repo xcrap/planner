@@ -20,7 +20,7 @@ type Project = {
 
 type ProjectFormProps = {
     project?: Project;
-    onSubmit: (project: Omit<Project, 'id'> & { id?: number }) => void;
+    onSubmit: (project: Omit<Project, 'id'> & { id?: number }) => void | Promise<void>;
     onCancel: () => void;
 };
 

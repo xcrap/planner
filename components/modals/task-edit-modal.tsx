@@ -26,12 +26,12 @@ export function TaskEditModal() {
     // Function to format date to UTC in YYYY-MM-DD format WITHOUT timezone conversion
     const formatDateToUTC = (dateString: string) => {
         if (!dateString) return '';
-        
+
         // If the dateString is already in YYYY-MM-DD format, return as is
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
             return dateString;
         }
-        
+
         // Otherwise, normalize to UTC and format
         const utcDate = normalizeToUTCDate(dateString);
         return format(utcDate, 'yyyy-MM-dd');
@@ -42,19 +42,19 @@ export function TaskEditModal() {
 
         // Log the raw dates from the database for debugging
         console.log('Database date strings:', selectedTask.startDate, selectedTask.endDate);
-        
+
         // Extract the date part only - important for correct UTC handling
         let startDateStr = selectedTask.startDate;
         let endDateStr = selectedTask.endDate;
-        
+
         if (startDateStr.includes('T')) {
             startDateStr = startDateStr.split('T')[0];
         }
-        
+
         if (endDateStr.includes('T')) {
             endDateStr = endDateStr.split('T')[0];
         }
-        
+
         console.log('Formatted UTC dates:', startDateStr, endDateStr);
 
         setFormData({
@@ -87,6 +87,16 @@ export function TaskEditModal() {
             .then(() => {
                 // Close the modal before task change propagation
                 setSelectedTask(null);
+
+                // Dispatch a custom event to notify all components that tasks have changed
+                window.dispatchEvent(new Event('tasks-changed'));
+
+                // If the task belongs to the currently selected project in the Gantt chart,
+                // trigger a refresh there too
+                if (typeof window.currentProjectId !== 'undefined' &&
+                    window.currentProjectId === updatedTask.projectId) {
+                    window.dispatchEvent(new Event('refresh-gantt'));
+                }
             })
             .catch(error => {
                 console.error("Failed to update task:", error);
@@ -143,15 +153,15 @@ export function TaskEditModal() {
                         <Checkbox
                             id="completed"
                             checked={formData.completed}
-                            onCheckedChange={(checked) => 
+                            onCheckedChange={(checked) =>
                                 setFormData(prev => ({ ...prev, completed: checked === true }))
                             }
                         />
                         <Label htmlFor="completed">Mark as completed</Label>
                     </div>
                     <div className="flex justify-end gap-2">
-                        <Button 
-                            type="button" 
+                        <Button
+                            type="button"
                             variant="destructive"
                             onClick={() => handleTaskDelete(selectedTask.id)}
                         >

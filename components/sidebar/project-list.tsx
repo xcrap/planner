@@ -73,9 +73,34 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
         }
     };
 
-    const handleSelectProject = (project: Project) => {
-        setSelectedProject(project);
-        onSelectProject(project);
+    const handleSelectProject = async (project: Project) => {
+        try {
+            // Fetch the latest project data including tasks
+            const response = await fetch(`/api/projects/${project.id}`);
+
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            // Get fresh project data with latest tasks
+            const freshProject = await response.json();
+
+            // Update the selected project with fresh data
+            setSelectedProject(freshProject);
+
+            // Update the projects array with the fresh project data
+            setProjects(projects.map(p =>
+                p.id === freshProject.id ? freshProject : p
+            ));
+
+            // Pass fresh project data to parent
+            onSelectProject(freshProject);
+        } catch (error) {
+            console.error('Error fetching project details:', error);
+            // Fallback to using cached data if fetch fails
+            setSelectedProject(project);
+            onSelectProject(project);
+        }
     };
 
     const handleAddProject = async (project: Omit<Project, 'id' | 'tasks'>) => {
@@ -218,7 +243,11 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
             {isEditingProject && selectedProject && (
                 <ProjectForm
                     project={selectedProject}
-                    onSubmit={handleUpdateProject}
+                    onSubmit={(project) => {
+                        // Create a wrapper that ensures id is properly handled
+                        const projectWithId = project.id ? project : { ...project, id: selectedProject.id };
+                        return handleUpdateProject(projectWithId as Partial<Project> & { id: number });
+                    }}
                     onCancel={() => setIsEditingProject(false)}
                 />
             )}
