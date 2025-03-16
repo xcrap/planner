@@ -184,7 +184,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
     // Add this useEffect to log and monitor the width calculation
     useEffect(() => {
         if (timeRange.length > 0) {
-            console.log(`Chart width calculation: ${timeRange.length} days × ${dayWidth}px + 200px = ${timeRange.length * dayWidth + 200}px`);
+            // console.log(`Chart width calculation: ${timeRange.length} days × ${dayWidth}px + 200px = ${timeRange.length * dayWidth + 200}px`);
         }
     }, [timeRange, dayWidth]);
 
