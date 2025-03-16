@@ -8,7 +8,7 @@ import { Plus } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format, parseISO } from 'date-fns';
 import { useTaskContext } from '@/contexts/task-context';
-import { Task } from '@/types/task';
+import type { Task } from '@/types/task';
 
 type TaskListProps = {
     projectId: number;
@@ -48,7 +48,7 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
     // Initial fetch and when projectId changes
     useEffect(() => {
         fetchTasks();
-    }, [fetchTasks, projectId]);
+    }, [fetchTasks]);
 
     // Add this new effect to make component refetch when tasks might have changed
     useEffect(() => {

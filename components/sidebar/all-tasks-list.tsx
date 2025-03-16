@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { useTaskContext } from '@/contexts/task-context';
-import { Task } from '@/types/task';
+import type { Task } from '@/types/task';
 
 type AllTasksListProps = {
     tasks: Task[];
