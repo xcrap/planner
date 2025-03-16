@@ -9,9 +9,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Layers } from "lucide-react";
 import { ProjectForm } from "@/components/sidebar/project-form";
-// import { TaskList } from "@/components/sidebar/task-list";
-// import { AllTasksList } from "@/components/sidebar/all-tasks-list";
 import type { Task, Project } from "@/types/task";
+import {
+    ContextMenu,
+    ContextMenuContent,
+    ContextMenuItem,
+    ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+
 
 export function ProjectList({
     onSelectProject,
@@ -275,18 +280,6 @@ export function ProjectList({
         }
     };
 
-    // Streamlined event listener for task changes
-    useEffect(() => {
-        const refreshAllTasks = () => {
-            if (isAllProjectsView && !isLoading.current) {
-                setTimeout(() => fetchAllTasks(), 100); // Add slight delay to prevent race conditions
-            }
-        };
-
-        window.addEventListener("tasks-changed", refreshAllTasks);
-        return () => window.removeEventListener("tasks-changed", refreshAllTasks);
-    }, [isAllProjectsView, fetchAllTasks]);
-
     return (
         <div className="h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
@@ -334,51 +327,46 @@ export function ProjectList({
                 )}
                 {Array.isArray(projects) &&
                     projects.map((project) => (
-                        <Card
-                            key={project.id}
-                            className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? "bg-black text-white shadow-none" : "shadow-none hover:border-neutral-300 hover:shadow-sm transition"}`}
-                            onClick={() => handleSelectProject(project)}
-                        >
-                            <CardHeader className="p-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center">
-                                        <div
-                                            className="w-3 h-3 rounded-full mr-3"
-                                            style={{ backgroundColor: project.color }}
-                                        />
-                                        <CardTitle className="text-base">{project.name}</CardTitle>
-                                    </div>
-                                    <div className="flex space-x-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setIsEditingProject(true);
-                                                setSelectedProject(project);
-                                            }}
-                                        >
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeleteProject(project.id);
-                                            }}
-                                        >
-                                            Delete
-                                        </Button>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="pt-0 p-0 px-4 pb-4">
-                                <div className="text-xs text-gray-500">
-                                    {project.tasks.length} tasks
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <ContextMenu key={project.id} >
+                            <ContextMenuTrigger className="flex flex-col space-y-2">
+                                <Card
+                                    className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? "bg-black text-white shadow-none" : "shadow-none hover:border-neutral-300 hover:shadow-sm transition"}`}
+                                    onClick={() => handleSelectProject(project)}
+                                >
+                                    <CardHeader className="p-4">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center">
+                                                <div
+                                                    className="w-3 h-3 rounded-full mr-3"
+                                                    style={{ backgroundColor: project.color }}
+                                                />
+                                                <CardTitle className="text-base">{project.name}</CardTitle>
+                                            </div>
+                                            {(project.tasks?.length ?? 0) > 0 && (
+                                                <div className={`text-xs px-2 py-1 rounded-md shadow-xs ${selectedProject?.id === project.id ? "bg-neutral-700 text-neutral-300 " : "bg-neutral-50 text-neutral-400 shadow-neutral-400/40"}`}>
+                                                    {project.tasks?.length || 0} tasks
+                                                </div>
+                                            )}
+                                        </div>
+                                    </CardHeader>
+                                </Card>
+                            </ContextMenuTrigger>
+                            <ContextMenuContent>
+                                <ContextMenuItem
+                                    onClick={() => {
+                                        setIsEditingProject(true);
+                                        setSelectedProject(project);
+                                    }}
+                                >
+                                    Edit
+                                </ContextMenuItem>
+                                <ContextMenuItem
+                                    onClick={() => handleDeleteProject(project.id)}
+                                >
+                                    Delete
+                                </ContextMenuItem>
+                            </ContextMenuContent>
+                        </ContextMenu>
                     ))}
             </div>
 
