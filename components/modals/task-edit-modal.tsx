@@ -268,7 +268,7 @@ export function TaskEditModal() {
                             </Popover>
                         </div>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 my-6">
                         <Checkbox
                             id="completed"
                             checked={formData.completed}
@@ -282,7 +282,20 @@ export function TaskEditModal() {
                         <Button
                             type="button"
                             variant="destructive"
-                            onClick={() => handleTaskDelete(selectedTask.id)}
+                            onClick={() => {
+                                handleTaskDelete(selectedTask.id)
+                                    .then(() => {
+                                        // Close the modal
+                                        setSelectedTask(null);
+
+                                        // Notify components that tasks have changed
+                                        window.dispatchEvent(new Event('tasks-changed'));
+                                        window.dispatchEvent(new Event('refresh-gantt'));
+                                    })
+                                    .catch(error => {
+                                        console.error("Failed to delete task:", error);
+                                    });
+                            }}
                         >
                             Delete
                         </Button>
