@@ -20,13 +20,11 @@ type TaskBarProps = {
     onResizeEnd: () => void;
     onTaskClick: (task: Task) => void;
     onReorder: (taskId: number, newOrder: number) => void;
-    todayOffset?: number; // New prop for today's position
     isAllProjectsView?: boolean; // Add this new prop
 };
 
 export function TaskBar({
     task,
-    index,
     startOffset,
     duration,
     dayWidth,
@@ -34,7 +32,6 @@ export function TaskBar({
     isResizing,
     resizeEdge,
     projectColor,
-    timeRange,
     onDragStart,
     onDrag,
     onDragEnd,
@@ -42,8 +39,6 @@ export function TaskBar({
     onResize,
     onResizeEnd,
     onTaskClick,
-    onReorder,
-    todayOffset,
     isAllProjectsView = false
 }: TaskBarProps) {
     const [dragStartX, setDragStartX] = useState<number>(0);
@@ -182,14 +177,6 @@ export function TaskBar({
                 )}
             </div>
 
-            {/* Today indicator line (if today is within the visible range) */}
-            {todayOffset !== undefined && (
-                <div
-                    className="absolute top-0 bottom-0 w-[2px] bg-blue-500 z-5 opacity-70"
-                    style={{ left: `${todayOffset * dayWidth + 48}px` }}
-                />
-            )}
-
             <div
                 ref={barRef}
                 className={`relative rounded-md border border-gray-400 text-white px-2 py-1 flex items-center h-10 z-10
@@ -239,7 +226,6 @@ export function TaskBar({
                     </div>
                 </div>
 
-                {/* Removed the duration indicator that was here */}
             </div>
         </div>
     );

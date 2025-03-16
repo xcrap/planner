@@ -35,7 +35,7 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                 id: -1, // Special ID for "All Projects"
                 name: "All Projects",
                 description: "Tasks from all projects",
-                color: "#6366f1", // Indigo color
+                color: '', // Indigo color
                 tasks: allTasks
             };
 
@@ -165,7 +165,7 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
             id: -1, // Special ID for "All Projects"
             name: "All Projects",
             description: "Tasks from all projects",
-            color: "#6366f1", // Indigo color
+            color: '', // Indigo color
             tasks: allTasks
         };
 
@@ -273,10 +273,6 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                 >
                     <CardHeader className="p-3 pb-1">
                         <div className="flex items-center">
-                            <div
-                                className="w-3 h-3 rounded-full mr-2"
-                                style={{ backgroundColor: "#6366f1" }} // Indigo color for All Projects
-                            />
                             <CardTitle className="text-base flex items-center">
                                 <Layers className="h-4 w-4 mr-2" />
                                 All Projects

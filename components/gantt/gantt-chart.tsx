@@ -195,8 +195,11 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
     const handleTaskDragEnd = async () => {
         if (draggingTaskId && dragPreviewOffset !== 0) {
-            // Only make the API call when dragging ends
-            const task = project?.tasks.find(t => t.id === draggingTaskId);
+            // Find the task from either project tasks or all projects
+            const task = isAllProjectsView
+                ? allProjects.flatMap(p => p.tasks).find(t => t.id === draggingTaskId)
+                : project?.tasks.find(t => t.id === draggingTaskId);
+
             if (task) {
                 // Extract dates from the string format and create new Date objects
                 const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
@@ -237,34 +240,29 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
     const handleTaskResizeEnd = async () => {
         if (resizingTaskId && resizeEdge && resizePreviewOffset !== 0) {
-            // Only make the API call when resizing ends
-            const task = project?.tasks.find(t => t.id === resizingTaskId);
+            // Find the task from either project tasks or all projects
+            const task = isAllProjectsView
+                ? allProjects.flatMap(p => p.tasks).find(t => t.id === resizingTaskId)
+                : project?.tasks.find(t => t.id === resizingTaskId);
+
             if (task) {
-                // Extract dates from the string format and create new Date objects
                 const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
                 const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
 
-                // Create UTC dates using the exact year, month, and day from the strings
                 const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
                 const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
 
-                // Create new Date objects for updating
                 let newStartDate = new Date(startDate);
                 let newEndDate = new Date(endDate);
 
-                // Apply the resize offset only to the appropriate edge
                 if (resizeEdge === 'start') {
                     newStartDate.setUTCDate(startDate.getUTCDate() + resizePreviewOffset);
-
-                    // Ensure start date is before end date
                     if (newStartDate >= endDate) {
                         newStartDate = new Date(endDate);
                         newStartDate.setUTCDate(endDate.getUTCDate() - 1);
                     }
                 } else {
                     newEndDate.setUTCDate(endDate.getUTCDate() + resizePreviewOffset);
-
-                    // Ensure end date is after start date
                     if (newEndDate <= startDate) {
                         newEndDate = new Date(startDate);
                         newEndDate.setUTCDate(startDate.getUTCDate() + 1);
@@ -272,6 +270,11 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                 }
 
                 await updateTaskDates(resizingTaskId, newStartDate, newEndDate);
+
+                // Force refresh of all projects if in All Projects view
+                if (isAllProjectsView) {
+                    await fetchAllProjects();
+                }
             }
         }
 
@@ -284,26 +287,45 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
     const updateTaskDates = async (taskId: number, startDate: Date, endDate: Date) => {
         try {
-            // Format dates in UTC for the API request using ISO string and extracting the date part
             const startDateFormatted = startDate.toISOString().split('T')[0];
             const endDateFormatted = endDate.toISOString().split('T')[0];
+
+            let projectId;
+            if (isAllProjectsView) {
+                const task = allProjects
+                    .flatMap(p => p.tasks)
+                    .find(t => t.id === taskId);
+                projectId = task?.projectId;
+            } else {
+                projectId = project?.id;
+            }
+
+            if (!projectId) {
+                console.error('Could not find project ID for task:', taskId);
+                return;
+            }
 
             const response = await fetch(`/api/tasks/${taskId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
+                    projectId,
                     startDate: `${startDateFormatted}T00:00:00.000Z`,
                     endDate: `${endDateFormatted}T00:00:00.000Z`,
                 })
             });
 
-            if (response.ok) {
-                // Make sure we call onTasksChanged to refresh the whole UI
-                onTasksChanged();
-
-                // Dispatch event to notify other components
-                window.dispatchEvent(new Event('tasks-changed'));
+            if (!response.ok) {
+                throw new Error(`Failed to update task: ${response.status}`);
             }
+
+            // Force refresh data
+            onTasksChanged();
+            if (isAllProjectsView) {
+                await fetchAllProjects();
+            }
+            window.dispatchEvent(new Event('tasks-changed'));
+            window.dispatchEvent(new Event('refresh-gantt'));
         } catch (error) {
             console.error('Error updating task dates:', error);
         }
@@ -341,10 +363,10 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
     };
 
     // Get today's date in UTC format for highlighting
-    const getTodayInUTC = () => {
-        const today = new Date();
-        return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    };
+    // const getTodayInUTC = () => {
+    //     const today = new Date();
+    //     return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    // };
 
     // Calculate today's offset from the start of the time range
     const calculateTodayOffset = () => {
@@ -568,7 +590,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                                         onReorder={(taskId: number, newOrder: number) => {
                                             console.log("Reordering task", taskId, "to", newOrder);
                                         }}
-                                        todayOffset={todayOffset}
+
                                         isAllProjectsView={isAllProjectsView}
                                     />
                                 );
