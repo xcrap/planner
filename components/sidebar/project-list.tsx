@@ -20,12 +20,32 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
     const [isEditingProject, setIsEditingProject] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [isAllProjectsView, setIsAllProjectsView] = useState(false);
+    const [isAllProjectsView, setIsAllProjectsView] = useState(true); // Default to true
     const [allTasks, setAllTasks] = useState<Task[]>([]);
 
     useEffect(() => {
         fetchProjects();
     }, []);
+
+    // Add a new effect to select "All Projects" view by default on initialization
+    useEffect(() => {
+        if (!loading && !error && projects.length > 0 && isAllProjectsView) {
+            // Create a virtual "All Projects" object and pass to the parent
+            const allProjectsView = {
+                id: -1, // Special ID for "All Projects"
+                name: "All Projects",
+                description: "Tasks from all projects",
+                color: "#6366f1", // Indigo color
+                tasks: allTasks
+            };
+
+            // Fetch all tasks for the default view
+            fetchAllTasks();
+
+            // Pass to parent
+            onSelectProject(allProjectsView);
+        }
+    }, [loading, projects]); // Run this effect when projects are loaded
 
     const fetchProjects = async () => {
         setLoading(true);
@@ -46,67 +66,60 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
 
             setProjects(projectsArray);
 
-            // Select the first project by default
-            if (projectsArray.length > 0 && !selectedProject) {
-                setSelectedProject(projectsArray[0]);
-                onSelectProject(projectsArray[0]);
+            // If we're in All Projects view, also fetch tasks right away
+            if (isAllProjectsView) {
+                fetchAllTasks();
             }
+
         } catch (error) {
             console.error('Error fetching projects:', error);
             setError('Failed to load projects. Please try again.');
             setProjects([]);
         } finally {
-            setLoading(false);
+            setLoading(false); // Make sure to always set loading to false when done
         }
     };
 
     const fetchAllTasks = async () => {
-        setLoading(true);
-        setError(null);
-
         try {
-            // Get all projects first
-            const response = await fetch('/api/projects');
-
-            if (!response.ok) {
-                throw new Error(`API error: ${response.status}`);
-            }
-
-            const data = await response.json();
-            const projectsArray = Array.isArray(data) ? data :
-                (data.projects && Array.isArray(data.projects) ? data.projects : []);
+            // Get all projects and extract tasks
+            const projects = await Promise.all(
+                (await fetch('/api/projects').then(res => res.json()))
+                    .map(async (project: Project) => {
+                        const details = await fetch(`/api/projects/${project.id}`).then(res => res.json());
+                        return {
+                            ...details,
+                            tasks: details.tasks.map((task: Task) => ({
+                                ...task,
+                                projectName: project.name,
+                                projectColor: project.color
+                            }))
+                        };
+                    })
+            );
 
             // Collect all tasks from all projects
             const tasks: Task[] = [];
-            projectsArray.forEach(project => {
+            projects.forEach(project => {
                 if (project.tasks && Array.isArray(project.tasks)) {
-                    // Add project info to each task
-                    const tasksWithProjectInfo = project.tasks.map(task => ({
-                        ...task,
-                        projectName: project.name,
-                        projectColor: project.color
-                    }));
-                    tasks.push(...tasksWithProjectInfo);
+                    tasks.push(...project.tasks);
                 }
             });
 
-            // Sort by completion status and date
+            // Sort tasks
             tasks.sort((a, b) => {
-                // First by completion status
                 if (a.completed !== b.completed) {
                     return a.completed ? 1 : -1;
                 }
-                // Then by date
                 return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
             });
 
             setAllTasks(tasks);
+            setLoading(false); // Ensure loading is set to false when tasks are ready
         } catch (error) {
             console.error('Error fetching all tasks:', error);
-            setError('Failed to load tasks. Please try again.');
             setAllTasks([]);
-        } finally {
-            setLoading(false);
+            setLoading(false); // Make sure to always set loading to false when done
         }
     };
 
@@ -278,7 +291,7 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                 {/* Divider */}
                 <div className="border-t border-gray-200 my-2"></div>
 
-                {loading && <p className="text-center py-4">Loading projects...</p>}
+                {loading && !isAllProjectsView && <p className="text-center py-4">Loading projects...</p>}
                 {error && <p className="text-center text-red-500 py-4">{error}</p>}
                 {!loading && !error && projects.length === 0 && (
                     <p className="text-center text-gray-500 py-4">No projects found. Create one to get started!</p>

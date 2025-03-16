@@ -54,12 +54,12 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         }
     };
 
-    // Fetch all projects when in "All Projects" view
+    // Immediately fetch all projects when component mounts or when refreshed
     useEffect(() => {
-        if (isAllProjectsView) {
+        if (isAllProjectsView || !project) {
             fetchAllProjects();
         }
-    }, [isAllProjectsView]);
+    }, [isAllProjectsView, project]);
 
     // Normalize date to UTC
     const normalizeToUTCDate = (date: string) => {
@@ -397,12 +397,12 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         return taskProject?.color || '#3498db';
     };
 
-    // Remove the block that prevents displaying Gantt for "All Projects"
+    // Update the default view text
     if (!project) {
         return (
             <div className="flex items-center justify-center h-full">
                 <div className="text-center p-6">
-                    <h3 className="text-xl font-semibold">Select a project to view its Gantt chart</h3>
+                    <h3 className="text-xl font-semibold">Select a project or view all tasks</h3>
                 </div>
             </div>
         );
