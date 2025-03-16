@@ -458,7 +458,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                 </div>
             </div>
 
-            <div className="flex grow overflow-auto" ref={containerRef}>
+            <div className="flex overflow-auto" ref={containerRef}>
                 <div className="relative flex flex-col min-w-full"
                     style={{
                         width: `${timeRange.length * dayWidth + 200}px`,
