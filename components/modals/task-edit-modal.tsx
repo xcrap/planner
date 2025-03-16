@@ -7,6 +7,14 @@ import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CalendarIcon } from "lucide-react"
+import { cn } from "@/lib/utils"
+import { Calendar } from "@/components/ui/calendar"
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover"
 
 export function TaskEditModal() {
     const { selectedTask, setSelectedTask, handleTaskUpdate, handleTaskDelete } = useTaskContext();
@@ -19,25 +27,32 @@ export function TaskEditModal() {
         projectId: 0,
     });
     const [projects, setProjects] = useState<Array<{ id: number, name: string }>>([]);
+    const [startDateOpen, setStartDateOpen] = useState(false);
+    const [endDateOpen, setEndDateOpen] = useState(false);
 
     // Normalize date to UTC
+    // Replace your normalizeToUTCDate function with this corrected version:
     const normalizeToUTCDate = (date: string) => {
+        // If date is in YYYY-MM-DD format, parse it correctly to avoid timezone issues
+        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            const [year, month, day] = date.split('-').map(Number);
+            return new Date(Date.UTC(year, month - 1, day)); // Month is 0-indexed in JS
+        }
+
+        // For other formats, use the previous approach
         const d = new Date(date);
         return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     };
 
-    // Function to format date to UTC in YYYY-MM-DD format WITHOUT timezone conversion
-    const formatDateToUTC = (dateString: string) => {
-        if (!dateString) return '';
+    // Add this function after your normalizeToUTCDate function
+    const getCalendarSelectedDate = (dateString: string) => {
+        if (!dateString) return undefined;
 
-        // If the dateString is already in YYYY-MM-DD format, return as is
-        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-            return dateString;
-        }
+        // Parse the yyyy-MM-dd string and create a local date object that will display correctly
+        const [year, month, day] = dateString.split('-').map(Number);
 
-        // Otherwise, normalize to UTC and format
-        const utcDate = normalizeToUTCDate(dateString);
-        return format(utcDate, 'yyyy-MM-dd');
+        // Create a local date without time components
+        return new Date(year, month - 1, day);
     };
 
     // Fetch all projects for the dropdown
@@ -63,9 +78,6 @@ export function TaskEditModal() {
     useEffect(() => {
         if (!selectedTask) return;
 
-        // Log the raw dates from the database for debugging
-        console.log('Database date strings:', selectedTask.startDate, selectedTask.endDate);
-
         // Extract the date part only - important for correct UTC handling
         let startDateStr = selectedTask.startDate;
         let endDateStr = selectedTask.endDate;
@@ -77,8 +89,6 @@ export function TaskEditModal() {
         if (endDateStr.includes('T')) {
             endDateStr = endDateStr.split('T')[0];
         }
-
-        console.log('Formatted UTC dates:', startDateStr, endDateStr);
 
         setFormData({
             name: selectedTask.name || '',
@@ -103,7 +113,7 @@ export function TaskEditModal() {
             return;
         }
 
-        console.log('Submitting form data:', formData);
+        // console.log('Submitting form data:', formData);
 
         // Validate project ID before proceeding
         if (!formData.projectId || formData.projectId <= 0) {
@@ -163,7 +173,7 @@ export function TaskEditModal() {
                         <Label htmlFor="project">Project</Label>
                         <Select
                             value={String(formData.projectId)}
-                            onValueChange={(value) => setFormData(prev => ({ ...prev, projectId: parseInt(value) }))}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, projectId: Number.parseInt(value) }))}
                         >
                             <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Select a project" />
@@ -178,23 +188,84 @@ export function TaskEditModal() {
                         </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
+                        {/* Start Date Picker */}
                         <div className="space-y-2">
-                            <Label htmlFor="startDate">Start Date (UTC)</Label>
-                            <Input
-                                id="startDate"
-                                type="date"
-                                value={formData.startDate}
-                                onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                            />
+                            <Label htmlFor="startDate">Start Date</Label>
+                            <Popover open={startDateOpen} onOpenChange={setStartDateOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !formData.startDate && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {formData.startDate ? format(new Date(`${formData.startDate}T12:00:00Z`), "PPP") : "Pick a date"}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={getCalendarSelectedDate(formData.startDate)}
+                                        onSelect={(date) => {
+                                            if (date) {
+                                                // Format date directly without UTC conversion
+                                                const year = date.getFullYear();
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const day = String(date.getDate()).padStart(2, '0');
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    startDate: `${year}-${month}-${day}`
+                                                }));
+                                            }
+                                            // Close the popover after selection
+                                            setStartDateOpen(false);
+                                        }}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
                         </div>
+
+                        {/* End Date Picker - use the same pattern */}
                         <div className="space-y-2">
-                            <Label htmlFor="endDate">End Date (UTC)</Label>
-                            <Input
-                                id="endDate"
-                                type="date"
-                                value={formData.endDate}
-                                onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                            />
+                            <Label htmlFor="endDate">End Date</Label>
+                            <Popover open={endDateOpen} onOpenChange={setEndDateOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant={"outline"}
+                                        className={cn(
+                                            "w-full justify-start text-left font-normal",
+                                            !formData.endDate && "text-muted-foreground"
+                                        )}
+                                    >
+                                        <CalendarIcon className="mr-2 h-4 w-4" />
+                                        {formData.endDate ? format(new Date(`${formData.endDate}T12:00:00Z`), "PPP") : "Pick a date"}
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                    <Calendar
+                                        mode="single"
+                                        selected={getCalendarSelectedDate(formData.endDate)}
+                                        onSelect={(date) => {
+                                            if (date) {
+                                                // Format date directly without UTC conversion
+                                                const year = date.getFullYear();
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const day = String(date.getDate()).padStart(2, '0');
+                                                setFormData(prev => ({
+                                                    ...prev,
+                                                    endDate: `${year}-${month}-${day}`
+                                                }));
+                                            }
+                                            // Close the popover after selection
+                                            setEndDateOpen(false);
+                                        }}
+                                        initialFocus
+                                    />
+                                </PopoverContent>
+                            </Popover>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
