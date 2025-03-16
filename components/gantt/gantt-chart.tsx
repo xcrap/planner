@@ -508,16 +508,13 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                                         tasksToRender = [...tasksToRender, ...proj.tasks];
                                     }
                                 });
-                                // Sort tasks by date
                                 tasksToRender.sort((a, b) => {
                                     // First by project
                                     if (a.projectId !== b.projectId) {
                                         return a.projectId - b.projectId;
                                     }
-                                    // Then by start date
-                                    const aDate = new Date(a.startDate);
-                                    const bDate = new Date(b.startDate);
-                                    return aDate.getTime() - bDate.getTime();
+                                    // Then by order within project
+                                    return a.order - b.order;
                                 });
                             } else if (project.tasks && project.tasks.length > 0) {
                                 // Use tasks from the selected project
