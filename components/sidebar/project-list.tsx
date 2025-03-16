@@ -9,8 +9,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Plus, Layers } from "lucide-react";
 import { ProjectForm } from "@/components/sidebar/project-form";
-import { TaskList } from "@/components/sidebar/task-list";
-import { AllTasksList } from "@/components/sidebar/all-tasks-list";
+// import { TaskList } from "@/components/sidebar/task-list";
+// import { AllTasksList } from "@/components/sidebar/all-tasks-list";
 import type { Task, Project } from "@/types/task";
 
 export function ProjectList({
@@ -372,9 +372,6 @@ export function ProjectList({
                                         </Button>
                                     </div>
                                 </div>
-                                <CardDescription className="truncate text-xs">
-                                    {project.description || "No description"}
-                                </CardDescription>
                             </CardHeader>
                             <CardContent className="pt-0 p-0 px-4 pb-4">
                                 <div className="text-xs text-gray-500">
@@ -401,20 +398,6 @@ export function ProjectList({
                 />
             )}
 
-            {selectedProject && !isAllProjectsView && (
-                <div className="mt-4">
-                    <TaskList
-                        projectId={selectedProject.id}
-                        onTasksChanged={fetchProjects}
-                    />
-                </div>
-            )}
-
-            {isAllProjectsView && (
-                <div className="mt-4">
-                    <AllTasksList tasks={allTasks} onTasksChanged={fetchAllTasks} />
-                </div>
-            )}
         </div>
     );
 }
