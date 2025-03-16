@@ -106,8 +106,18 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
             });
 
             if (response.ok) {
+                // Update local tasks list
                 fetchTasks();
-                // onTasksChanged is already called by the context when task is updated
+
+                // Dispatch events to notify other components about the change
+                window.dispatchEvent(new Event('tasks-changed'));
+
+                // If this task is in the current project being viewed in the Gantt chart,
+                // trigger a refresh there too
+                if (typeof window.currentProjectId !== 'undefined' &&
+                    window.currentProjectId === projectId) {
+                    window.dispatchEvent(new Event('refresh-gantt'));
+                }
             }
         } catch (error) {
             console.error('Error updating task completion:', error);
