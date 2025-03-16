@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from 'react';
+import { formatISO, parseISO } from 'date-fns';
 
 type Task = {
     id: number;
@@ -22,17 +23,49 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export function TaskProvider({ children, onTasksChanged }: { children: ReactNode, onTasksChanged: () => void }) {
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+    
+    // Normalize date to UTC
+    const normalizeToUTCDate = (date: string) => {
+        const d = new Date(date);
+        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    };
+
+    // Set the selected task with careful handling of dates
+    const safeSetSelectedTask = (task: Task | null) => {
+        if (!task) {
+            setSelectedTask(null);
+            return;
+        }
+        
+        // Ensure we preserve the exact date string format from the database
+        const preservedTask = {
+            ...task,
+            // Make sure we're using the raw string values
+            startDate: task.startDate,
+            endDate: task.endDate
+        };
+        
+        console.log('Setting selected task with dates:', preservedTask.startDate, preservedTask.endDate);
+        setSelectedTask(preservedTask);
+    };
 
     const handleTaskUpdate = async (task: Task) => {
         try {
             const isNewTask = !task.id;
             const url = isNewTask ? '/api/tasks' : `/api/tasks/${task.id}`;
             const method = isNewTask ? 'POST' : 'PUT';
+            
+            // Normalize dates to UTC before sending to the server
+            const cleanTask = {
+                ...task,
+                startDate: formatISO(normalizeToUTCDate(task.startDate), { representation: 'complete' }),
+                endDate: formatISO(normalizeToUTCDate(task.endDate), { representation: 'complete' })
+            };
 
             const response = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(task)
+                body: JSON.stringify(cleanTask)
             });
 
             if (response.ok) {
@@ -64,7 +97,8 @@ export function TaskProvider({ children, onTasksChanged }: { children: ReactNode
     return (
         <TaskContext.Provider value={{
             selectedTask,
-            setSelectedTask,
+            // Use our safe setter instead
+            setSelectedTask: safeSetSelectedTask,
             handleTaskUpdate,
             handleTaskDelete,
         }}>

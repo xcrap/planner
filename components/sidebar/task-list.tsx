@@ -1,4 +1,3 @@
-// components/sidebar/task-list.tsx
 import { useState, useEffect, useCallback } from 'react';
 import {
     Card,
@@ -7,7 +6,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { useTaskContext } from '@/contexts/task-context';
 
 type Task = {
@@ -47,12 +46,16 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
     }, [fetchTasks, projectId]);
 
     const handleAddClick = () => {
+        // Create a new task with UTC dates
+        const today = new Date();
+        const utcToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+        
         const newTask = {
             id: 0, // This will be replaced by the server
             name: '',
             description: '',
-            startDate: new Date().toISOString().split('T')[0],
-            endDate: new Date().toISOString().split('T')[0],
+            startDate: format(utcToday, 'yyyy-MM-dd'),
+            endDate: format(utcToday, 'yyyy-MM-dd'),
             completed: false,
             order: tasks.length,
             projectId: projectId
@@ -80,6 +83,22 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
         } catch (error) {
             console.error('Error updating task completion:', error);
         }
+    };
+
+    // Normalize date to exact UTC without any timezone conversion
+    const normalizeToUTCDate = (date: string) => {
+        const d = new Date(date);
+        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    };
+    
+    // Format date in UTC explicitly using standard JavaScript methods
+    const formatUTCDate = (dateString: string) => {
+        if (!dateString) return '';
+        const date = normalizeToUTCDate(dateString);
+        // Use universal date formatting that maintains UTC
+        const month = date.toLocaleString('en', { month: 'short', timeZone: 'UTC' });
+        const day = date.getUTCDate();
+        return `${month} ${day}`;
     };
 
     return (
@@ -143,7 +162,7 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
 
                                             <div className="flex text-xs text-gray-500 mt-2">
                                                 <span className="flex-1">
-                                                    {format(new Date(task.startDate), 'MMM d')} - {format(new Date(task.endDate), 'MMM d')}
+                                                    {formatUTCDate(task.startDate)} - {formatUTCDate(task.endDate)}
                                                 </span>
                                                 <span>
                                                     #{task.order}

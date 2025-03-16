@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useTaskContext } from "@/contexts/task-context";
 import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { format } from 'date-fns';
 
 export function TaskEditModal() {
     const { selectedTask, setSelectedTask, handleTaskUpdate, handleTaskDelete } = useTaskContext();
@@ -16,23 +17,54 @@ export function TaskEditModal() {
         completed: false,
     });
 
-    // Helper function to format dates
-    const formatDate = (dateString: string) => {
+    // Normalize date to UTC
+    const normalizeToUTCDate = (date: string) => {
+        const d = new Date(date);
+        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+    };
+
+    // Function to format date to UTC in YYYY-MM-DD format WITHOUT timezone conversion
+    const formatDateToUTC = (dateString: string) => {
         if (!dateString) return '';
-        const date = new Date(dateString);
-        return date.toISOString().split('T')[0];
+        
+        // If the dateString is already in YYYY-MM-DD format, return as is
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+            return dateString;
+        }
+        
+        // Otherwise, normalize to UTC and format
+        const utcDate = normalizeToUTCDate(dateString);
+        return format(utcDate, 'yyyy-MM-dd');
     };
 
     useEffect(() => {
-        if (selectedTask) {
-            setFormData({
-                name: selectedTask.name || '',
-                description: selectedTask.description || '',
-                startDate: formatDate(selectedTask.startDate),
-                endDate: formatDate(selectedTask.endDate),
-                completed: selectedTask.completed,
-            });
+        if (!selectedTask) return;
+
+        // Log the raw dates from the database for debugging
+        console.log('Database date strings:', selectedTask.startDate, selectedTask.endDate);
+        
+        // Extract the date part only - important for correct UTC handling
+        let startDateStr = selectedTask.startDate;
+        let endDateStr = selectedTask.endDate;
+        
+        if (startDateStr.includes('T')) {
+            startDateStr = startDateStr.split('T')[0];
         }
+        
+        if (endDateStr.includes('T')) {
+            endDateStr = endDateStr.split('T')[0];
+        }
+        
+        console.log('Formatted UTC dates:', startDateStr, endDateStr);
+
+        setFormData({
+            name: selectedTask.name || '',
+            description: selectedTask.description || '',
+            // Use exact date strings without any timezone manipulation
+            startDate: startDateStr,
+            endDate: endDateStr,
+            completed: selectedTask.completed || false,
+        });
     }, [selectedTask]);
 
     if (!selectedTask) return null;
@@ -41,10 +73,17 @@ export function TaskEditModal() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        handleTaskUpdate({
+        console.log('Submitting form data:', formData);
+
+        // Add UTC time to indicate these are UTC dates
+        const updatedTask = {
             ...selectedTask,
             ...formData,
-        });
+            startDate: `${formData.startDate}T00:00:00.000Z`,
+            endDate: `${formData.endDate}T00:00:00.000Z`,
+        };
+
+        handleTaskUpdate(updatedTask);
     };
 
     return (
@@ -75,7 +114,7 @@ export function TaskEditModal() {
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="startDate">Start Date</Label>
+                            <Label htmlFor="startDate">Start Date (UTC)</Label>
                             <Input
                                 id="startDate"
                                 type="date"
@@ -84,7 +123,7 @@ export function TaskEditModal() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="endDate">End Date</Label>
+                            <Label htmlFor="endDate">End Date (UTC)</Label>
                             <Input
                                 id="endDate"
                                 type="date"
