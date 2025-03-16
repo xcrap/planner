@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { ProjectList } from '@/components/sidebar/project-list';
 import { GanttChart } from '@/components/gantt/gantt-chart';
 import { initializeDatabase } from '@/lib/db';
-import 'tailwindcss/tailwind.css';
 import { TaskProvider } from '@/contexts/task-context';
 import { TaskEditModal } from '@/components/modals/task-edit-modal';
 

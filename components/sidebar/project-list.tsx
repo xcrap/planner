@@ -157,7 +157,7 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                 />
             )}
 
-            <div className="space-y-2 px-3 flex-grow overflow-auto">
+            <div className="space-y-2 px-3 grow overflow-auto">
                 {loading && <p className="text-center py-4">Loading projects...</p>}
                 {error && <p className="text-center text-red-500 py-4">{error}</p>}
                 {!loading && !error && projects.length === 0 && (

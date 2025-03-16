@@ -10,7 +10,7 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
         <div className="sticky top-0 bg-white z-10 border-b border-gray-200">
             <div className="flex">
                 {/* Empty space for task names */}
-                <div className="w-48 flex-shrink-0" />
+                <div className="w-48 shrink-0" />
 
                 {/* Days */}
                 <div className="flex">

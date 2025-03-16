@@ -155,7 +155,7 @@ export function TaskBar({
 
             <div
                 ref={barRef}
-                className="relative rounded-md shadow-sm border border-gray-400 text-white px-2 py-1 flex items-center h-10"
+                className="relative rounded-md shadow-xs border border-gray-400 text-white px-2 py-1 flex items-center h-10"
                 style={getTaskStyle()}
                 onMouseDown={handleDragStart}
                 onClick={handleClick}
