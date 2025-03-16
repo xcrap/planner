@@ -1,5 +1,5 @@
 // components/sidebar/task-list.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Card,
     CardContent,
@@ -31,15 +31,11 @@ type TaskListProps = {
 
 export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
     const [tasks, setTasks] = useState<Task[]>([]);
-    const { setSelectedTask } = useTaskContext();
+    const { setSelectedTask, handleTaskDelete } = useTaskContext();
 
-    useEffect(() => {
-        if (projectId) {
-            fetchTasks();
-        }
-    }, [projectId]);
-
-    const fetchTasks = async () => {
+    const fetchTasks = useCallback(async () => {
+        if (!projectId) return;
+        
         try {
             const response = await fetch(`/api/projects/${projectId}`);
             const project = await response.json();
@@ -47,7 +43,11 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
         } catch (error) {
             console.error('Error fetching tasks:', error);
         }
-    };
+    }, [projectId]);
+
+    useEffect(() => {
+        fetchTasks();
+    }, [fetchTasks, projectId]);
 
     const handleAddClick = () => {
         const newTask = {
@@ -64,20 +64,8 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
     };
 
     const handleDeleteTask = async (taskId: number) => {
-        if (!confirm('Are you sure you want to delete this task?')) return;
-
-        try {
-            const response = await fetch(`/api/tasks/${taskId}`, {
-                method: 'DELETE'
-            });
-
-            if (response.ok) {
-                fetchTasks();
-                onTasksChanged();
-            }
-        } catch (error) {
-            console.error('Error deleting task:', error);
-        }
+        await handleTaskDelete(taskId);
+        fetchTasks(); // Refresh the list after deletion
     };
 
     const handleToggleTaskCompletion = async (taskId: number, completed: boolean) => {

@@ -83,7 +83,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         }
 
         setTimeRange(range);
-    }, [project]);
+    }, [project, project?.tasks.length]);
 
     const handleTaskDragStart = (taskId: number) => {
         setDraggingTaskId(taskId);

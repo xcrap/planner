@@ -37,7 +37,7 @@ export function TaskProvider({ children, onTasksChanged }: { children: ReactNode
 
             if (response.ok) {
                 setSelectedTask(null);
-                onTasksChanged();
+                onTasksChanged(); // This will trigger updates in both components
             }
         } catch (error) {
             console.error('Error updating task:', error);
@@ -54,7 +54,7 @@ export function TaskProvider({ children, onTasksChanged }: { children: ReactNode
 
             if (response.ok) {
                 setSelectedTask(null);
-                onTasksChanged();
+                onTasksChanged(); // This will trigger updates in both components
             }
         } catch (error) {
             console.error('Error deleting task:', error);
