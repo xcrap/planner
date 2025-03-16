@@ -8,17 +8,7 @@ import { Plus } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { format, parseISO } from 'date-fns';
 import { useTaskContext } from '@/contexts/task-context';
-
-type Task = {
-    id: number;
-    name: string;
-    description: string | null;
-    startDate: string;
-    endDate: string;
-    completed: boolean;
-    order: number;
-    projectId: number;
-};
+import { Task } from '@/types/task';
 
 type TaskListProps = {
     projectId: number;

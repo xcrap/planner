@@ -7,26 +7,11 @@ import {
     CardTitle
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Plus, Layers } from 'lucide-react';
 import { ProjectForm } from '@/components/sidebar/project-form';
 import { TaskList } from '@/components/sidebar/task-list';
-
-type Project = {
-    id: number;
-    name: string;
-    description: string | null;
-    color: string;
-    tasks: Task[];
-};
-
-type Task = {
-    id: number;
-    name: string;
-    startDate: string;
-    endDate: string;
-    completed: boolean;
-    projectId: number;
-};
+import { AllTasksList } from '@/components/sidebar/all-tasks-list';
+import { Task, Project } from '@/types/task';
 
 export function ProjectList({ onSelectProject }: { onSelectProject: (project: Project) => void }) {
     const [projects, setProjects] = useState<Project[]>([]);
@@ -35,6 +20,8 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
     const [isEditingProject, setIsEditingProject] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isAllProjectsView, setIsAllProjectsView] = useState(false);
+    const [allTasks, setAllTasks] = useState<Task[]>([]);
 
     useEffect(() => {
         fetchProjects();
@@ -73,7 +60,59 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
         }
     };
 
+    const fetchAllTasks = async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            // Get all projects first
+            const response = await fetch('/api/projects');
+
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const projectsArray = Array.isArray(data) ? data :
+                (data.projects && Array.isArray(data.projects) ? data.projects : []);
+
+            // Collect all tasks from all projects
+            const tasks: Task[] = [];
+            projectsArray.forEach(project => {
+                if (project.tasks && Array.isArray(project.tasks)) {
+                    // Add project info to each task
+                    const tasksWithProjectInfo = project.tasks.map(task => ({
+                        ...task,
+                        projectName: project.name,
+                        projectColor: project.color
+                    }));
+                    tasks.push(...tasksWithProjectInfo);
+                }
+            });
+
+            // Sort by completion status and date
+            tasks.sort((a, b) => {
+                // First by completion status
+                if (a.completed !== b.completed) {
+                    return a.completed ? 1 : -1;
+                }
+                // Then by date
+                return new Date(a.startDate).getTime() - new Date(b.startDate).getTime();
+            });
+
+            setAllTasks(tasks);
+        } catch (error) {
+            console.error('Error fetching all tasks:', error);
+            setError('Failed to load tasks. Please try again.');
+            setAllTasks([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSelectProject = async (project: Project) => {
+        setIsAllProjectsView(false);
+
         try {
             // Fetch the latest project data including tasks
             const response = await fetch(`/api/projects/${project.id}`);
@@ -101,6 +140,23 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
             setSelectedProject(project);
             onSelectProject(project);
         }
+    };
+
+    const handleSelectAllProjects = () => {
+        setIsAllProjectsView(true);
+        setSelectedProject(null);
+        fetchAllTasks();
+
+        // Create a virtual "All Projects" object to pass to the parent
+        const allProjectsView = {
+            id: -1, // Special ID for "All Projects"
+            name: "All Projects",
+            description: "Tasks from all projects",
+            color: "#6366f1", // Indigo color
+            tasks: allTasks
+        };
+
+        onSelectProject(allProjectsView);
     };
 
     const handleAddProject = async (project: Omit<Project, 'id' | 'tasks'>) => {
@@ -162,6 +218,20 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
         }
     };
 
+    useEffect(() => {
+        const refreshAllTasks = () => {
+            if (isAllProjectsView) {
+                fetchAllTasks();
+            }
+        };
+
+        window.addEventListener('tasks-changed', refreshAllTasks);
+
+        return () => {
+            window.removeEventListener('tasks-changed', refreshAllTasks);
+        };
+    }, [isAllProjectsView]);
+
     return (
         <div className="h-full flex flex-col">
             <div className="flex items-center justify-between p-4">
@@ -183,6 +253,31 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
             )}
 
             <div className="space-y-2 px-3 grow overflow-auto">
+                {/* All Projects option */}
+                <Card
+                    className={`cursor-pointer ${isAllProjectsView ? 'border-2 border-primary' : ''}`}
+                    onClick={handleSelectAllProjects}
+                >
+                    <CardHeader className="p-3 pb-1">
+                        <div className="flex items-center">
+                            <div
+                                className="w-3 h-3 rounded-full mr-2"
+                                style={{ backgroundColor: "#6366f1" }} // Indigo color for All Projects
+                            />
+                            <CardTitle className="text-base flex items-center">
+                                <Layers className="h-4 w-4 mr-2" />
+                                All Projects
+                            </CardTitle>
+                        </div>
+                        <CardDescription className="truncate text-xs">
+                            View tasks from all projects
+                        </CardDescription>
+                    </CardHeader>
+                </Card>
+
+                {/* Divider */}
+                <div className="border-t border-gray-200 my-2"></div>
+
                 {loading && <p className="text-center py-4">Loading projects...</p>}
                 {error && <p className="text-center text-red-500 py-4">{error}</p>}
                 {!loading && !error && projects.length === 0 && (
@@ -191,7 +286,7 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                 {Array.isArray(projects) && projects.map(project => (
                     <Card
                         key={project.id}
-                        className={`cursor-pointer ${selectedProject?.id === project.id ? 'border-2 border-primary' : ''}`}
+                        className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? 'border-2 border-primary' : ''}`}
                         onClick={() => handleSelectProject(project)}
                     >
                         <CardHeader className="p-3 pb-1">
@@ -252,11 +347,20 @@ export function ProjectList({ onSelectProject }: { onSelectProject: (project: Pr
                 />
             )}
 
-            {selectedProject && (
+            {selectedProject && !isAllProjectsView && (
                 <div className="mt-4">
                     <TaskList
                         projectId={selectedProject.id}
                         onTasksChanged={fetchProjects}
+                    />
+                </div>
+            )}
+
+            {isAllProjectsView && (
+                <div className="mt-4">
+                    <AllTasksList
+                        tasks={allTasks}
+                        onTasksChanged={fetchAllTasks}
                     />
                 </div>
             )}

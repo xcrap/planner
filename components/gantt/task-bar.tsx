@@ -1,15 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-
-type Task = {
-    id: number;
-    name: string;
-    description: string | null;
-    startDate: string;
-    endDate: string;
-    completed: boolean;
-    order: number;
-    projectId: number;
-};
+import { Task } from '@/types/task';
 
 type TaskBarProps = {
     task: Task;
@@ -31,6 +21,7 @@ type TaskBarProps = {
     onTaskClick: (task: Task) => void;
     onReorder: (taskId: number, newOrder: number) => void;
     todayOffset?: number; // New prop for today's position
+    isAllProjectsView?: boolean; // Add this new prop
 };
 
 export function TaskBar({
@@ -52,7 +43,8 @@ export function TaskBar({
     onResizeEnd,
     onTaskClick,
     onReorder,
-    todayOffset
+    todayOffset,
+    isAllProjectsView = false
 }: TaskBarProps) {
     const [dragStartX, setDragStartX] = useState<number>(0);
     const [initialX, setInitialX] = useState<number>(0);
@@ -172,7 +164,23 @@ export function TaskBar({
 
     return (
         <div className="relative flex items-center h-14 mb-1 group border-b border-gray-200">
-            <div className="px-4 w-48 truncate font-medium">{task.name}</div>
+            <div className="px-4 w-48 truncate font-medium">
+                {/* Show project name when in All Projects view */}
+                {isAllProjectsView ? (
+                    <div className="flex flex-col">
+                        <span>{task.name}</span>
+                        <span className="text-xs text-gray-500 flex items-center">
+                            <span
+                                className="inline-block w-2 h-2 rounded-full mr-1"
+                                style={{ backgroundColor: projectColor }}
+                            ></span>
+                            {task.projectName || `Project #${task.projectId}`}
+                        </span>
+                    </div>
+                ) : (
+                    task.name
+                )}
+            </div>
 
             {/* Today indicator line (if today is within the visible range) */}
             {todayOffset !== undefined && (
@@ -208,6 +216,11 @@ export function TaskBar({
 
                 <span className="truncate text-sm select-none">
                     {task.name} ({startDateDisplay} - {endDateDisplay})
+                    {isAllProjectsView && (
+                        <span className="ml-1 opacity-75">
+                            · {task.projectName || `Project #${task.projectId}`}
+                        </span>
+                    )}
                 </span>
 
                 {/* Resize handle - right edge */}

@@ -3,25 +3,7 @@ import { addDays, format, differenceInDays, parseISO, isWeekend } from 'date-fns
 import { TaskBar } from '@/components/gantt/task-bar';
 import { Timeline } from '@/components/gantt/timeline';
 import { useTaskContext } from '@/contexts/task-context';
-
-type Project = {
-    id: number;
-    name: string;
-    description: string | null;
-    color: string;
-    tasks: Task[];
-};
-
-type Task = {
-    id: number;
-    name: string;
-    description: string | null;
-    startDate: string;
-    endDate: string;
-    completed: boolean;
-    order: number;
-    projectId: number;
-};
+import { Task, Project } from '@/types/task';
 
 type GanttChartProps = {
     project: Project | null;
@@ -46,6 +28,38 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
     // New state for tracking preview offsets
     const [dragPreviewOffset, setDragPreviewOffset] = useState<number>(0);
     const [resizePreviewOffset, setResizePreviewOffset] = useState<number>(0);
+
+    // Check if this is the "All Projects" virtual project
+    const isAllProjectsView = project?.id === -1;
+    const [allProjects, setAllProjects] = useState<Project[]>([]);
+
+    // Add a function to fetch all projects when in "All Projects" view
+    const fetchAllProjects = async () => {
+        if (!isAllProjectsView) return;
+
+        try {
+            const response = await fetch('/api/projects');
+            if (!response.ok) {
+                throw new Error(`API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const projectsArray = Array.isArray(data) ? data :
+                (data.projects && Array.isArray(data.projects) ? data.projects : []);
+
+            setAllProjects(projectsArray);
+        } catch (error) {
+            console.error('Error fetching all projects:', error);
+            setAllProjects([]);
+        }
+    };
+
+    // Fetch all projects when in "All Projects" view
+    useEffect(() => {
+        if (isAllProjectsView) {
+            fetchAllProjects();
+        }
+    }, [isAllProjectsView]);
 
     // Normalize date to UTC
     const normalizeToUTCDate = (date: string) => {
@@ -75,8 +89,55 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         };
     }, [project?.id, onTasksChanged]);
 
+    // Modify the timeRange calculation to include tasks from all projects when in "All Projects" view
     useEffect(() => {
-        if (!project || !project.tasks.length) {
+        if (!project) {
+            const today = new Date();
+            // Create UTC dates for the time range (same day in UTC)
+            const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+            const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0));
+            const range: Date[] = [];
+
+            let current = new Date(start);
+            while (current <= end) {
+                range.push(new Date(current));
+                current = addDays(current, 1);
+            }
+
+            setTimeRange(range);
+            return;
+        }
+
+        let tasks: Task[] = [];
+
+        // Use tasks from all projects when in "All Projects" view
+        if (isAllProjectsView && allProjects.length > 0) {
+            allProjects.forEach(proj => {
+                if (proj.tasks && Array.isArray(proj.tasks)) {
+                    tasks = [...tasks, ...proj.tasks];
+                }
+            });
+        } else if (project.tasks && project.tasks.length > 0) {
+            // Use tasks from the selected project
+            tasks = project.tasks;
+        } else {
+            const today = new Date();
+            // Create UTC dates for the time range (same day in UTC)
+            const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+            const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0));
+            const range: Date[] = [];
+
+            let current = new Date(start);
+            while (current <= end) {
+                range.push(new Date(current));
+                current = addDays(current, 1);
+            }
+
+            setTimeRange(range);
+            return;
+        }
+
+        if (tasks.length === 0) {
             const today = new Date();
             // Create UTC dates for the time range (same day in UTC)
             const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
@@ -94,10 +155,10 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         }
 
         // Use normalized UTC dates for the tasks
-        let earliestDate = normalizeToUTCDate(project.tasks[0].startDate);
-        let latestDate = normalizeToUTCDate(project.tasks[0].endDate);
+        let earliestDate = normalizeToUTCDate(tasks[0].startDate);
+        let latestDate = normalizeToUTCDate(tasks[0].endDate);
 
-        project.tasks.forEach(task => {
+        tasks.forEach(task => {
             const taskStartDate = normalizeToUTCDate(task.startDate);
             const taskEndDate = normalizeToUTCDate(task.endDate);
 
@@ -122,7 +183,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         }
 
         setTimeRange(range);
-    }, [project, project?.tasks.length]);
+    }, [project, isAllProjectsView, allProjects]);
 
     const handleTaskDragStart = (taskId: number) => {
         setDraggingTaskId(taskId);
@@ -256,6 +317,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         setSelectedTask(task);
     };
 
+    // handleAddTask needs to be updated for "All Projects" view
     const handleAddTask = async () => {
         if (!project) return;
 
@@ -264,6 +326,10 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         const utcToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
         const utcTomorrow = addDays(utcToday, 1);
 
+        // For "All Projects" view, we need a default project
+        const targetProjectId = isAllProjectsView && allProjects.length > 0 ?
+            allProjects[0].id : project.id;
+
         const newTask = {
             id: undefined, // Changed from not setting id at all
             name: 'New Task',
@@ -271,8 +337,8 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             startDate: format(utcToday, 'yyyy-MM-dd'),
             endDate: format(utcTomorrow, 'yyyy-MM-dd'),
             completed: false,
-            projectId: project.id,
-            order: project.tasks.length // Add order to maintain consistency
+            projectId: targetProjectId,
+            order: isAllProjectsView ? 0 : project.tasks.length // Add order to maintain consistency
         };
 
         setSelectedTask(newTask as Task); // Cast to Task since we know this is a new task
@@ -320,6 +386,18 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             date.getUTCDate() === today.getUTCDate();
     };
 
+    // Get the project color for a task based on its projectId
+    const getProjectColorForTask = (taskProjectId: number): string => {
+        if (!isAllProjectsView) {
+            return project?.color || '#3498db';
+        }
+
+        // Find the project that owns this task
+        const taskProject = allProjects.find(p => p.id === taskProjectId);
+        return taskProject?.color || '#3498db';
+    };
+
+    // Remove the block that prevents displaying Gantt for "All Projects"
     if (!project) {
         return (
             <div className="flex items-center justify-center h-full">
@@ -337,7 +415,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
     return (
         <div className="flex flex-col h-full overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 border-b">
-                <h2 className="text-xl font-bold">{project.name} - Gantt Chart</h2>
+                <h2 className="text-xl font-bold">{project.name}</h2>
                 <div className="flex items-center space-x-4">
                     <button
                         onClick={handleAddTask}
@@ -401,63 +479,105 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
                     {/* Tasks container */}
                     <div className="relative z-10">
-                        {project.tasks.length > 0 ? (
-                            project.tasks
-                                .sort((a, b) => a.order - b.order)
-                                .map((task, index) => {
-                                    // Extract dates directly from the string format
-                                    const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
-                                    const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
+                        {(() => {
+                            // Determine which tasks to render
+                            let tasksToRender: Task[] = [];
 
-                                    // Create UTC dates using the exact year, month, and day
-                                    const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
-                                    const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
+                            if (isAllProjectsView) {
+                                // Collect tasks from all projects
+                                allProjects.forEach(proj => {
+                                    if (proj.tasks) {
+                                        tasksToRender = [...tasksToRender, ...proj.tasks];
+                                    }
+                                });
+                                // Sort tasks by date
+                                tasksToRender.sort((a, b) => {
+                                    // First by project
+                                    if (a.projectId !== b.projectId) {
+                                        return a.projectId - b.projectId;
+                                    }
+                                    // Then by start date
+                                    const aDate = new Date(a.startDate);
+                                    const bDate = new Date(b.startDate);
+                                    return aDate.getTime() - bDate.getTime();
+                                });
+                            } else if (project.tasks && project.tasks.length > 0) {
+                                // Use tasks from the selected project
+                                tasksToRender = project.tasks.sort((a, b) => a.order - b.order);
+                            }
 
-                                    // Get the first date in the time range
-                                    const timeRangeStartParts = timeRange[0].toISOString().split('T')[0].split('-').map(Number);
-                                    const timeRangeStartUTC = new Date(Date.UTC(timeRangeStartParts[0], timeRangeStartParts[1] - 1, timeRangeStartParts[2]));
+                            if (tasksToRender.length === 0) {
+                                return (
+                                    <div className="flex items-center justify-center h-40 text-gray-500">
+                                        <p>No tasks yet. Click "Add Task" to create one.</p>
+                                    </div>
+                                );
+                            }
 
-                                    // Calculate days between UTC dates
-                                    const startOffset = differenceInDays(startDate, timeRangeStartUTC);
-                                    // Calculate duration using UTC dates
-                                    const duration = differenceInDays(endDate, startDate) + 1;
+                            return tasksToRender.map((task, index) => {
+                                // Extract dates directly from the string format
+                                const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
+                                const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
 
-                                    // Apply preview offsets for the active task
-                                    const previewDragOffset = (draggingTaskId === task.id) ? dragPreviewOffset : 0;
-                                    const previewResizeStartOffset = (resizingTaskId === task.id && resizeEdge === 'start') ? resizePreviewOffset : 0;
-                                    const previewResizeEndOffset = (resizingTaskId === task.id && resizeEdge === 'end') ? resizePreviewOffset : 0;
+                                // Create UTC dates using the exact year, month, and day
+                                const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
+                                const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
 
-                                    return (
-                                        <TaskBar
-                                            key={task.id}
-                                            task={task}
-                                            index={index}
-                                            startOffset={startOffset + previewDragOffset + previewResizeStartOffset}
-                                            duration={duration - previewResizeStartOffset + previewResizeEndOffset}
-                                            dayWidth={dayWidth}
-                                            isDragging={draggingTaskId === task.id}
-                                            isResizing={resizingTaskId === task.id}
-                                            resizeEdge={resizeEdge}
-                                            timeRange={timeRange}
-                                            onDragStart={handleTaskDragStart}
-                                            onDrag={handleTaskDrag}
-                                            onDragEnd={handleTaskDragEnd}
-                                            onResizeStart={handleTaskResizeStart}
-                                            onResize={handleTaskResize}
-                                            onResizeEnd={handleTaskResizeEnd}
-                                            onTaskClick={handleTaskClick}
-                                            projectColor={project.color}
-                                            onReorder={(taskId: number, newOrder: number) => {
-                                                console.log("Reordering task", taskId, "to", newOrder);
-                                            }}
-                                        />
-                                    );
-                                })
-                        ) : (
-                            <div className="flex items-center justify-center h-40 text-gray-500">
-                                <p>No tasks yet. Click "Add Task" to create one.</p>
-                            </div>
-                        )}
+                                // Get the first date in the time range
+                                const timeRangeStartParts = timeRange[0].toISOString().split('T')[0].split('-').map(Number);
+                                const timeRangeStartUTC = new Date(Date.UTC(timeRangeStartParts[0], timeRangeStartParts[1] - 1, timeRangeStartParts[2]));
+
+                                // Calculate days between UTC dates
+                                const startOffset = differenceInDays(startDate, timeRangeStartUTC);
+                                // Calculate duration using UTC dates
+                                const duration = differenceInDays(endDate, startDate) + 1;
+
+                                // Apply preview offsets for the active task
+                                const previewDragOffset = (draggingTaskId === task.id) ? dragPreviewOffset : 0;
+                                const previewResizeStartOffset = (resizingTaskId === task.id && resizeEdge === 'start') ? resizePreviewOffset : 0;
+                                const previewResizeEndOffset = (resizingTaskId === task.id && resizeEdge === 'end') ? resizePreviewOffset : 0;
+
+                                // Get the color based on project
+                                const taskColor = getProjectColorForTask(task.projectId);
+
+                                // Add project info to the task when in All Projects view
+                                if (isAllProjectsView) {
+                                    const taskProject = allProjects.find(p => p.id === task.projectId);
+                                    task = {
+                                        ...task,
+                                        projectName: taskProject?.name || 'Unknown Project'
+                                    };
+                                }
+
+                                return (
+                                    <TaskBar
+                                        key={task.id}
+                                        task={task}
+                                        index={index}
+                                        startOffset={startOffset + previewDragOffset + previewResizeStartOffset}
+                                        duration={duration - previewResizeStartOffset + previewResizeEndOffset}
+                                        dayWidth={dayWidth}
+                                        isDragging={draggingTaskId === task.id}
+                                        isResizing={resizingTaskId === task.id}
+                                        resizeEdge={resizeEdge}
+                                        timeRange={timeRange}
+                                        onDragStart={handleTaskDragStart}
+                                        onDrag={handleTaskDrag}
+                                        onDragEnd={handleTaskDragEnd}
+                                        onResizeStart={handleTaskResizeStart}
+                                        onResize={handleTaskResize}
+                                        onResizeEnd={handleTaskResizeEnd}
+                                        onTaskClick={handleTaskClick}
+                                        projectColor={taskColor}
+                                        onReorder={(taskId: number, newOrder: number) => {
+                                            console.log("Reordering task", taskId, "to", newOrder);
+                                        }}
+                                        todayOffset={todayOffset}
+                                        isAllProjectsView={isAllProjectsView}
+                                    />
+                                );
+                            });
+                        })()}
                     </div>
                 </div>
             </div>
