@@ -59,7 +59,7 @@ export function TaskBar({
     const [hasMovement, setHasMovement] = useState<boolean>(false);
     const [hoverEdge, setHoverEdge] = useState<'start' | 'end' | null>(null);
     const barRef = useRef<HTMLDivElement>(null);
-    
+
     // The startOffset and duration props now include preview values from parent
     const left = startOffset * dayWidth;
     const width = duration * dayWidth;
@@ -112,15 +112,15 @@ export function TaskBar({
         const handleMouseMove = (e: MouseEvent) => {
             // Calculate the delta X movement
             const deltaX = e.clientX - dragStartX;
-            
+
             if (deltaX !== 0) {
                 setHasMovement(true);
             }
-            
+
             // Convert pixel movement to days
             const exactDaysOffset = deltaX / dayWidth;
             const daysOffset = Math.round(exactDaysOffset);
-            
+
             if (isDragging) {
                 onDrag(task.id, daysOffset);
             } else if (isResizing && resizeEdge) {
@@ -135,7 +135,7 @@ export function TaskBar({
             if (isResizing) {
                 onResizeEnd();
             }
-            
+
             // Reset movement flag after a short delay
             setTimeout(() => setHasMovement(false), 100);
         };
@@ -176,7 +176,7 @@ export function TaskBar({
 
             {/* Today indicator line (if today is within the visible range) */}
             {todayOffset !== undefined && (
-                <div 
+                <div
                     className="absolute top-0 bottom-0 w-[2px] bg-blue-500 z-5 opacity-70"
                     style={{ left: `${todayOffset * dayWidth + 48}px` }}
                 />
@@ -193,9 +193,9 @@ export function TaskBar({
                 {/* Resize handle - left edge */}
                 <div
                     className={`absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
-                        ${(isResizing && resizeEdge === 'start') || hoverEdge === 'start' 
-                          ? 'bg-blue-400 opacity-50 w-4 -ml-1 rounded-l-md' 
-                          : 'hover:bg-blue-400 hover:opacity-30'}`}
+                        ${(isResizing && resizeEdge === 'start') || hoverEdge === 'start'
+                            ? 'bg-blue-400 opacity-50 w-4 -ml-1 rounded-l-md'
+                            : 'hover:bg-blue-400 hover:opacity-30'}`}
                     onMouseDown={(e) => handleResizeStart(e, 'start')}
                     onMouseEnter={() => handleResizeHover('start')}
                     onMouseLeave={() => handleResizeHover(null)}
@@ -213,9 +213,9 @@ export function TaskBar({
                 {/* Resize handle - right edge */}
                 <div
                     className={`absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
-                        ${(isResizing && resizeEdge === 'end') || hoverEdge === 'end' 
-                          ? 'bg-blue-400 opacity-50 w-4 -mr-1 rounded-r-md' 
-                          : 'hover:bg-blue-400 hover:opacity-30'}`}
+                        ${(isResizing && resizeEdge === 'end') || hoverEdge === 'end'
+                            ? 'bg-blue-400 opacity-50 w-4 -mr-1 rounded-r-md'
+                            : 'hover:bg-blue-400 hover:opacity-30'}`}
                     onMouseDown={(e) => handleResizeStart(e, 'end')}
                     onMouseEnter={() => handleResizeHover('end')}
                     onMouseLeave={() => handleResizeHover(null)}

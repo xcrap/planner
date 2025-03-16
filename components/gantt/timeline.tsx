@@ -26,8 +26,8 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
     const isDateToday = (date: Date) => {
         const today = new Date();
         return date.getUTCFullYear() === today.getUTCFullYear() &&
-               date.getUTCMonth() === today.getUTCMonth() &&
-               date.getUTCDate() === today.getUTCDate();
+            date.getUTCMonth() === today.getUTCMonth() &&
+            date.getUTCDate() === today.getUTCDate();
     };
 
     return (
@@ -42,7 +42,7 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
                         const isCurrentDay = isDateToday(date);
                         // Today's styling takes precedence over weekend styling
                         const bgColorClass = isCurrentDay ? 'bg-blue-50' : (isWeekend(date) ? 'bg-gray-50' : '');
-                        
+
                         return (
                             <div
                                 key={i}
