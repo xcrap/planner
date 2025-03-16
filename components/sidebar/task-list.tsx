@@ -27,7 +27,9 @@ type TaskListProps = {
 
 export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
     const [tasks, setTasks] = useState<Task[]>([]);
-    const { setSelectedTask, handleTaskDelete } = useTaskContext();
+    const { selectedTask, setSelectedTask, handleTaskDelete } = useTaskContext();
+    // Add a key to track when tasks are updated
+    const [updateKey, setUpdateKey] = useState(0);
 
     const fetchTasks = useCallback(async () => {
         if (!projectId) return;
@@ -36,11 +38,24 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
             const response = await fetch(`/api/projects/${projectId}`);
             const project = await response.json();
             setTasks(project.tasks);
+            // Force component to re-render after fetching new data
+            setUpdateKey(prev => prev + 1);
         } catch (error) {
             console.error('Error fetching tasks:', error);
         }
     }, [projectId]);
 
+    // This effect runs when the modal closes (task was edited)
+    useEffect(() => {
+        // Only trigger refresh when selectedTask changes from something to null
+        // This happens when a task is edited and the modal closes
+        if (selectedTask === null) {
+            // Small delay to ensure API has the latest data
+            setTimeout(fetchTasks, 50);
+        }
+    }, [selectedTask, fetchTasks]);
+
+    // Initial fetch and when projectId changes
     useEffect(() => {
         fetchTasks();
     }, [fetchTasks, projectId]);
@@ -78,7 +93,7 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
 
             if (response.ok) {
                 fetchTasks();
-                onTasksChanged();
+                // onTasksChanged is already called by the context when task is updated
             }
         } catch (error) {
             console.error('Error updating task completion:', error);
@@ -87,14 +102,25 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
 
     // Normalize date to exact UTC without any timezone conversion
     const normalizeToUTCDate = (date: string) => {
-        const d = new Date(date);
-        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+        if (!date) return new Date();
+        
+        // If it's already a date string in ISO format, parse it properly
+        try {
+            // Extract just the date part to avoid timezone issues
+            const datePart = date.split('T')[0];
+            const [year, month, day] = datePart.split('-').map(Number);
+            return new Date(Date.UTC(year, month - 1, day));
+        } catch (error) {
+            console.error("Date parsing error:", error);
+            return new Date();
+        }
     };
     
     // Format date in UTC explicitly using standard JavaScript methods
     const formatUTCDate = (dateString: string) => {
         if (!dateString) return '';
         const date = normalizeToUTCDate(dateString);
+        // Force render with the refresh key to ensure dates update
         // Use universal date formatting that maintains UTC
         const month = date.toLocaleString('en', { month: 'short', timeZone: 'UTC' });
         const day = date.getUTCDate();
@@ -121,7 +147,8 @@ export function TaskList({ projectId, onTasksChanged }: TaskListProps) {
                     tasks
                         .sort((a, b) => a.order - b.order)
                         .map(task => (
-                            <Card key={task.id} className="relative">
+                            // Add the updateKey to the key to force re-render
+                            <Card key={`${task.id}-${updateKey}`} className="relative">
                                 <CardContent className="p-3">
                                     <div className="flex items-start gap-2">
                                         <Checkbox

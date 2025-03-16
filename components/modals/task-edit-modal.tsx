@@ -83,7 +83,14 @@ export function TaskEditModal() {
             endDate: `${formData.endDate}T00:00:00.000Z`,
         };
 
-        handleTaskUpdate(updatedTask);
+        handleTaskUpdate(updatedTask)
+            .then(() => {
+                // Close the modal before task change propagation
+                setSelectedTask(null);
+            })
+            .catch(error => {
+                console.error("Failed to update task:", error);
+            });
     };
 
     return (

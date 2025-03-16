@@ -1,5 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { formatISO, parseISO } from 'date-fns';
+import { createContext, useState, useContext, ReactNode } from 'react';
 
 type Task = {
     id: number;
@@ -12,95 +11,80 @@ type Task = {
     projectId: number;
 };
 
-type TaskContextType = {
+interface TaskContextType {
     selectedTask: Task | null;
     setSelectedTask: (task: Task | null) => void;
     handleTaskUpdate: (task: Task) => Promise<void>;
     handleTaskDelete: (taskId: number) => Promise<void>;
-};
+}
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
-export function TaskProvider({ children, onTasksChanged }: { children: ReactNode, onTasksChanged: () => void }) {
+interface TaskProviderProps {
+    children: ReactNode;
+    onTasksChanged?: () => void;
+}
+
+export function TaskProvider({ children, onTasksChanged }: TaskProviderProps) {
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     
-    // Normalize date to UTC
-    const normalizeToUTCDate = (date: string) => {
-        const d = new Date(date);
-        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-    };
-
-    // Set the selected task with careful handling of dates
-    const safeSetSelectedTask = (task: Task | null) => {
-        if (!task) {
-            setSelectedTask(null);
-            return;
-        }
-        
-        // Ensure we preserve the exact date string format from the database
-        const preservedTask = {
-            ...task,
-            // Make sure we're using the raw string values
-            startDate: task.startDate,
-            endDate: task.endDate
-        };
-        
-        console.log('Setting selected task with dates:', preservedTask.startDate, preservedTask.endDate);
-        setSelectedTask(preservedTask);
-    };
-
     const handleTaskUpdate = async (task: Task) => {
         try {
-            const isNewTask = !task.id;
-            const url = isNewTask ? '/api/tasks' : `/api/tasks/${task.id}`;
-            const method = isNewTask ? 'POST' : 'PUT';
-            
-            // Normalize dates to UTC before sending to the server
-            const cleanTask = {
-                ...task,
-                startDate: formatISO(normalizeToUTCDate(task.startDate), { representation: 'complete' }),
-                endDate: formatISO(normalizeToUTCDate(task.endDate), { representation: 'complete' })
-            };
-
-            const response = await fetch(url, {
-                method,
+            const response = await fetch(`/api/tasks/${task.id || ''}`, {
+                method: task.id ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(cleanTask)
+                body: JSON.stringify(task)
             });
-
+            
             if (response.ok) {
+                // First call onTasksChanged to update the project data
+                if (onTasksChanged) {
+                    await onTasksChanged(); // Wait for this to complete
+                }
+                
+                // Close the modal after data update is done
                 setSelectedTask(null);
-                onTasksChanged(); // This will trigger updates in both components
+                return Promise.resolve();
+            } else {
+                console.error('Error updating task:', await response.text());
+                return Promise.reject('Failed to update task');
             }
         } catch (error) {
             console.error('Error updating task:', error);
+            return Promise.reject(error);
         }
     };
-
+    
     const handleTaskDelete = async (taskId: number) => {
-        if (!confirm('Are you sure you want to delete this task?')) return;
-
+        if (!taskId) return Promise.resolve();
+        
         try {
             const response = await fetch(`/api/tasks/${taskId}`, {
                 method: 'DELETE'
             });
-
+            
             if (response.ok) {
                 setSelectedTask(null);
-                onTasksChanged(); // This will trigger updates in both components
+                // Call onTasksChanged with a slight delay
+                if (onTasksChanged) {
+                    setTimeout(onTasksChanged, 0);
+                }
+                return Promise.resolve();
+            } else {
+                return Promise.reject('Failed to delete task');
             }
         } catch (error) {
             console.error('Error deleting task:', error);
+            return Promise.reject(error);
         }
     };
-
+    
     return (
         <TaskContext.Provider value={{
             selectedTask,
-            // Use our safe setter instead
-            setSelectedTask: safeSetSelectedTask,
+            setSelectedTask,
             handleTaskUpdate,
-            handleTaskDelete,
+            handleTaskDelete
         }}>
             {children}
         </TaskContext.Provider>

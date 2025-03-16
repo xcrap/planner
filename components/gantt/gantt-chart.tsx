@@ -220,7 +220,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             
             console.log("Updating task dates to:", startDateFormatted, endDateFormatted);
             
-            await fetch(`/api/tasks/${taskId}`, {
+            const response = await fetch(`/api/tasks/${taskId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -228,6 +228,11 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                     endDate: `${endDateFormatted}T00:00:00.000Z`,
                 })
             });
+            
+            if (response.ok) {
+                // Make sure we call onTasksChanged to refresh the whole UI
+                onTasksChanged();
+            }
         } catch (error) {
             console.error('Error updating task dates:', error);
         }
