@@ -6,6 +6,7 @@ import { useTaskContext } from "@/contexts/task-context";
 import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function TaskEditModal() {
     const { selectedTask, setSelectedTask, handleTaskUpdate, handleTaskDelete } = useTaskContext();
@@ -15,7 +16,9 @@ export function TaskEditModal() {
         startDate: '',
         endDate: '',
         completed: false,
+        projectId: 0,
     });
+    const [projects, setProjects] = useState<Array<{ id: number, name: string }>>([]);
 
     // Normalize date to UTC
     const normalizeToUTCDate = (date: string) => {
@@ -36,6 +39,26 @@ export function TaskEditModal() {
         const utcDate = normalizeToUTCDate(dateString);
         return format(utcDate, 'yyyy-MM-dd');
     };
+
+    // Fetch all projects for the dropdown
+    const fetchProjects = async () => {
+        try {
+            const response = await fetch('/api/projects');
+            if (response.ok) {
+                const data = await response.json();
+                setProjects(data);
+            } else {
+                console.error('Failed to fetch projects');
+            }
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+        }
+    };
+
+    useEffect(() => {
+        // Fetch projects when the component mounts
+        fetchProjects();
+    }, []);
 
     useEffect(() => {
         if (!selectedTask) return;
@@ -64,6 +87,7 @@ export function TaskEditModal() {
             startDate: startDateStr,
             endDate: endDateStr,
             completed: selectedTask.completed || false,
+            projectId: selectedTask.projectId || 0,
         });
     }, [selectedTask]);
 
@@ -94,7 +118,8 @@ export function TaskEditModal() {
                 // If the task belongs to the currently selected project in the Gantt chart,
                 // trigger a refresh there too
                 if (typeof window.currentProjectId !== 'undefined' &&
-                    window.currentProjectId === updatedTask.projectId) {
+                    (window.currentProjectId === updatedTask.projectId ||
+                        window.currentProjectId === selectedTask.projectId)) {
                     window.dispatchEvent(new Event('refresh-gantt'));
                 }
             })
@@ -128,6 +153,24 @@ export function TaskEditModal() {
                             value={formData.description}
                             onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                         />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="project">Project</Label>
+                        <Select
+                            value={String(formData.projectId)}
+                            onValueChange={(value) => setFormData(prev => ({ ...prev, projectId: parseInt(value) }))}
+                        >
+                            <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select a project" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {projects.map((project) => (
+                                    <SelectItem key={project.id} value={String(project.id)}>
+                                        {project.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
