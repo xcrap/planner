@@ -5,6 +5,12 @@ import { Timeline } from '@/components/gantt/timeline';
 import { useTaskContext } from '@/contexts/task-context';
 import type { Task, Project } from '@/types/task';
 
+// Move the function outside the component so it's not recreated on each render
+const normalizeToUTCDate = (date: string) => {
+    const d = new Date(date);
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+};
+
 type GanttChartProps = {
     project: Project | null;
     onTasksChanged: () => void;
@@ -61,12 +67,6 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         }
     }, [isAllProjectsView, project, fetchAllProjects]);
 
-    // Normalize date to UTC
-    const normalizeToUTCDate = (date: string) => {
-        const d = new Date(date);
-        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-    };
-
     useEffect(() => {
         const handleRefreshGantt = () => {
             // Always call onTasksChanged to refresh data
@@ -83,7 +83,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         return () => {
             window.removeEventListener('refresh-gantt', handleRefreshGantt);
         };
-    }, [onTasksChanged, isAllProjectsView, fetchAllProjects, normalizeToUTCDate]);
+    }, [onTasksChanged, isAllProjectsView, fetchAllProjects]);
 
     // Modify the timeRange calculation to include tasks from all projects when in "All Projects" view
     useEffect(() => {
