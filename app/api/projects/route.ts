@@ -5,7 +5,7 @@ export async function GET() {
     try {
         const projects = await prisma.project.findMany({
             include: { tasks: true },
-            orderBy: { createdAt: 'desc' }
+            orderBy: { createdAt: 'asc' }
         });
         return NextResponse.json(projects);
     } catch (error) {

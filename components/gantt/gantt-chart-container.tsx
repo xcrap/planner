@@ -14,14 +14,12 @@ export function GanttChartContainer({ projectId = null }: GanttChartContainerPro
         projects,
         isLoading,
         fetchProjects,
-        fetchProjectDetails,
-        setSelectedProjectId
+        fetchProjectDetails
     } = useAppStore(state => ({
         projects: state.projects,
         isLoading: state.isLoading,
         fetchProjects: state.fetchProjects,
-        fetchProjectDetails: state.fetchProjectDetails,
-        setSelectedProjectId: state.setSelectedProjectId
+        fetchProjectDetails: state.fetchProjectDetails
     }));
 
     // Create a no-op function for the required prop
