@@ -41,4 +41,4 @@ next-env.d.ts
 gantt.db
 
 # Experiments
-backups/**/
+/backups
