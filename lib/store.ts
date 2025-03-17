@@ -55,16 +55,40 @@ export const useAppStore = create<AppState>()(
             },
             getTasksByProjectId: (projectId) => {
                 const project = get().projects.find(p => p.id === projectId);
-                return project?.tasks || [];
+                // Return tasks sorted by their inherent order
+                return project?.tasks?.slice().sort((a, b) => {
+                    // First sort by order property if it exists
+                    if (a.order !== undefined && b.order !== undefined) {
+                        return a.order - b.order;
+                    }
+                    // Fall back to sorting by id if order is not available
+                    return a.id - b.id;
+                }) || [];
             },
             getAllTasks: () => {
-                return get().projects.flatMap(project => 
-                    project.tasks?.map(task => ({
-                        ...task,
-                        projectName: project.name,
-                        projectColor: project.color
-                    })) || []
-                );
+                return get().projects.reduce((allTasks, project) => {
+                    if (project.tasks && project.tasks.length > 0) {
+                        // Sort tasks using the same logic as in getTasksByProjectId
+                        const sortedTasks = project.tasks.slice().sort((a, b) => {
+                            // First sort by order property if it exists
+                            if (a.order !== undefined && b.order !== undefined) {
+                                return a.order - b.order;
+                            }
+                            // Fall back to sorting by id if order is not available
+                            return a.id - b.id;
+                        });
+                        
+                        const projectTasks = sortedTasks.map(task => ({
+                            ...task,
+                            projectName: project.name,
+                            projectColor: project.color
+                        }));
+                        
+                        allTasks.push(...projectTasks);
+                    }
+                    
+                    return allTasks;
+                }, [] as (Task & { projectName: string; projectColor: string })[]);
             },
             
             // Project actions
