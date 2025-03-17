@@ -37,7 +37,7 @@ export function GanttChart({
 
     // Access store data with proper selectors
     const updateTask = useAppStore(state => state.updateTask);
-    const getProjectById = useAppStore(state => state.getProjectById);
+    // Remove the unused getProjectById variable
     // Use updateTask for reordering since there's no dedicated reorderTask function
     const reorderTask = updateTask;
 
@@ -98,24 +98,36 @@ export function GanttChart({
         }
 
         setTimeRange(range);
-    }, []); // Empty dependency array
+    }, []); // Empty dependency array is correct here
+
+    // Create a stable memoized reference to the tasks
+    const tasksRef = useRef(tasks);
+
+    // Update the ref when tasks change
+    useEffect(() => {
+        tasksRef.current = tasks;
+    }, [tasks]);
 
     // Now the useEffect can reference calculateTimeRange safely
     useEffect(() => {
         // Initial calculation
-        calculateTimeRange(tasks);
+        calculateTimeRange(tasksRef.current);
 
-        // Set up the subscription
+        // Set up the subscription to handle updates from store
         const unsubscribe = useAppStore.subscribe((state) => {
             const newTasks = projectId
                 ? state.getTasksByProjectId(projectId)
                 : state.getAllTasks();
 
-            calculateTimeRange(newTasks);
+            // Use the reference to compare with current tasks
+            // This avoids the dependency issue while still being reactive
+            if (JSON.stringify(newTasks) !== JSON.stringify(tasksRef.current)) {
+                calculateTimeRange(newTasks);
+            }
         });
 
         return unsubscribe;
-    }, [projectId, calculateTimeRange]);
+    }, [projectId, calculateTimeRange]); // Only depend on projectId and calculateTimeRange
 
     const handleTaskDragStart = (taskId: number) => {
         setDraggingTaskId(taskId);
@@ -291,7 +303,7 @@ export function GanttChart({
         const today = new Date();
         return date.getUTCFullYear() === today.getFullYear() &&
             date.getUTCMonth() === today.getMonth() &&
-            date.getUTCDate() === today.getDate();
+            date.getUTCDate() === today.getUTCDate();
     };
 
     // Get the project color for a task based on its projectId
