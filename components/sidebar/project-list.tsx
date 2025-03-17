@@ -15,7 +15,9 @@ import {
     ContextMenuContent,
     ContextMenuItem,
     ContextMenuTrigger,
+    ContextMenuLabel
 } from "@/components/ui/context-menu";
+import { ContextMenuSeparator } from "@radix-ui/react-context-menu";
 
 
 export function ProjectList({
@@ -303,7 +305,7 @@ export function ProjectList({
             <div className="space-y-2 overflow-auto mb-10">
                 {/* All Projects option */}
                 <Card
-                    className={`cursor-pointer ${isAllProjectsView ? "bg-black text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm transition"}`}
+                    className={`cursor-pointer ${isAllProjectsView ? "bg-neutral-900 text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm"} transition`}
                     onClick={handleSelectAllProjects}
                 >
                     <CardHeader className="p-4">
@@ -327,10 +329,10 @@ export function ProjectList({
                 )}
                 {Array.isArray(projects) &&
                     projects.map((project) => (
-                        <ContextMenu key={project.id} >
+                        <ContextMenu key={project.id}>
                             <ContextMenuTrigger className="flex flex-col space-y-2">
                                 <Card
-                                    className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? "bg-black text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm transition"}`}
+                                    className={`cursor-pointer ${selectedProject?.id === project.id && !isAllProjectsView ? "bg-neutral-900 text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm"} transition`}
                                     onClick={() => handleSelectProject(project)}
                                 >
                                     <CardHeader className="p-4">
@@ -351,7 +353,9 @@ export function ProjectList({
                                     </CardHeader>
                                 </Card>
                             </ContextMenuTrigger>
-                            <ContextMenuContent>
+                            <ContextMenuContent className="bg-white shadow-lg border border-neutral-200 w-38">
+                                <ContextMenuLabel className="text-xs uppercase font-medium text-black">Project Actions</ContextMenuLabel>
+                                <ContextMenuSeparator className="border-neutral-100 border-b my-2" />
                                 <ContextMenuItem
                                     onClick={() => {
                                         setIsEditingProject(true);
@@ -360,6 +364,7 @@ export function ProjectList({
                                 >
                                     Edit
                                 </ContextMenuItem>
+
                                 <ContextMenuItem
                                     onClick={() => handleDeleteProject(project.id)}
                                 >
