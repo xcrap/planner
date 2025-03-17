@@ -1,7 +1,6 @@
 'use client';
 
 import { ProjectList } from '@/components/sidebar/project-list';
-import { TaskProvider } from '@/contexts/task-context';
 import { TaskEditModal } from '@/components/modals/task-edit-modal';
 import { useAppStore } from '@/lib/store';
 
@@ -15,7 +14,7 @@ export default function DashboardLayout({
     const fetchProjects = useAppStore(state => state.fetchProjects);
 
     return (
-        <TaskProvider>
+        <>
             {/* header */}
             <header className="flex items-center justify-between p-6 text-black">
                 <h1 className="text-2xl font-semibold">Gantt Task Planner</h1>
@@ -34,6 +33,6 @@ export default function DashboardLayout({
 
                 <TaskEditModal />
             </main>
-        </TaskProvider>
+        </>
     );
 }

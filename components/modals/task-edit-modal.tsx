@@ -2,7 +2,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useTaskContext } from "@/contexts/task-context";
 import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from 'date-fns';
@@ -18,7 +17,10 @@ import {
 import { useAppStore } from "@/lib/store";
 
 export function TaskEditModal() {
-    const { selectedTask, setSelectedTask, handleTaskUpdate, handleTaskDelete } = useTaskContext();
+    const selectedTask = useAppStore(state => state.selectedTask);
+    const setSelectedTask = useAppStore(state => state.setSelectedTask);
+    const updateTask = useAppStore(state => state.updateTask);
+    const deleteTask = useAppStore(state => state.deleteTask);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -96,7 +98,7 @@ export function TaskEditModal() {
             endDate: `${formData.endDate}T00:00:00.000Z`,
         };
 
-        handleTaskUpdate(updatedTask)
+        updateTask(updatedTask)
             .catch(error => {
                 console.error("Failed to update task:", error);
             });
@@ -244,7 +246,7 @@ export function TaskEditModal() {
                             type="button"
                             variant="destructive"
                             onClick={() => {
-                                handleTaskDelete(selectedTask.id)
+                                deleteTask(selectedTask.id)
                                     .then(() => {
                                         // Task will be deleted from store by the handleTaskDelete function
                                         // window.dispatchEvent(new Event('refresh-gantt'));

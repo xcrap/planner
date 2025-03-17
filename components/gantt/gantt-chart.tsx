@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button"
 import { addDays, format, differenceInDays, isWeekend } from 'date-fns';
 import { TaskBar } from '@/components/gantt/task-bar';
 import { Timeline } from '@/components/gantt/timeline';
-import { useTaskContext } from '@/contexts/task-context';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import type { Task, Project } from '@/types/task';
@@ -30,7 +29,7 @@ export function GanttChart({
     const [resizeEdge, setResizeEdge] = useState<'start' | 'end' | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [dayWidth, setDayWidth] = useState(60);
-    const { setSelectedTask } = useTaskContext();
+    const setSelectedTask = useAppStore(state => state.setSelectedTask);
 
     // New state for tracking preview offsets
     const [dragPreviewOffset, setDragPreviewOffset] = useState<number>(0);

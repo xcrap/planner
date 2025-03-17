@@ -8,6 +8,7 @@ type AppState = {
     isLoading: boolean;
     error: string | null;
     selectedProjectId: number | null;
+    selectedTask: Task | null;
     
     // Selectors
     getProjectById: (id: number) => Project | undefined;
@@ -27,6 +28,7 @@ type AppState = {
     addTask: (task: Omit<Task, 'id'>) => Promise<Task | null>;
     updateTask: (task: Partial<Task> & { id: number }) => Promise<Task | null>;
     deleteTask: (taskId: number) => Promise<boolean>;
+    setSelectedTask: (task: Task | null) => void;
     
     // Data fetching
     fetchProjects: () => Promise<void>;
@@ -41,6 +43,7 @@ export const useAppStore = create<AppState>()(
             isLoading: false,
             error: null,
             selectedProjectId: null,
+            selectedTask: null,
             
             // Selectors
             getProjectById: (id) => get().projects.find(project => project.id === id),
@@ -293,6 +296,8 @@ export const useAppStore = create<AppState>()(
                         const serverTask = await response.json();
                         // Ensure our local state matches server state
                         get().setTask(serverTask);
+                        // Clear selected task
+                        set({ selectedTask: null });
                         return serverTask;
                     }
                     
@@ -332,7 +337,10 @@ export const useAppStore = create<AppState>()(
                             tasks: project.tasks?.filter(t => t.id !== taskId) || []
                         };
                         
-                        set({ projects: updatedProjects });
+                        set({ 
+                            projects: updatedProjects,
+                            selectedTask: null // Clear selected task
+                        });
                     }
                     
                     const response = await fetch(`/api/tasks/${taskId}`, {
@@ -422,13 +430,15 @@ export const useAppStore = create<AppState>()(
                     set({ error: "Error fetching project details", isLoading: false });
                     return null;
                 }
-            }
+            },
+            setSelectedTask: (task) => set({ selectedTask: task }),
         }),
         {
             name: 'gantt-app-storage',
             // Only persist specific parts of the state
             partialize: (state) => ({ 
-                selectedProjectId: state.selectedProjectId 
+                selectedProjectId: state.selectedProjectId,
+                selectedTask: state.selectedTask // Add task to persisted state
             }),
         }
     )
