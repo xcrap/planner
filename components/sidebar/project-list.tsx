@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Layers } from "lucide-react";
-import { ProjectForm } from "@/components/sidebar/project-form";
 import { useAppStore } from "@/lib/store";
 import {
     ContextMenu,
@@ -21,12 +20,12 @@ import {
 } from "@/components/ui/context-menu";
 import { ContextMenuSeparator } from "@radix-ui/react-context-menu";
 import type { Project } from "@/types/task";
+import { ProjectEditModal } from "@/components/modals/project-edit-modal";
 
 export function ProjectList() {
     const router = useRouter();
     const pathname = usePathname();
-    const [isAddingProject, setIsAddingProject] = useState(false);
-    const [isEditingProject, setIsEditingProject] = useState(false);
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
     // Use Zustand store for projects data and actions
@@ -34,18 +33,12 @@ export function ProjectList() {
         projects,
         fetchProjects,
         isLoading,
-        error,
-        addProject,
-        updateProject,
-        deleteProject
+        error
     } = useAppStore(state => ({
         projects: state.projects,
         fetchProjects: state.fetchProjects,
         isLoading: state.isLoading,
-        error: state.error,
-        addProject: state.addProject,
-        updateProject: state.updateProject,
-        deleteProject: state.deleteProject
+        error: state.error
     }));
 
     // Get the current projectId from the pathname
@@ -53,7 +46,6 @@ export function ProjectList() {
         const match = pathname.match(/\/gantt\/(\d+)/);
         return match ? Number.parseInt(match[1]) : null;
     };
-
     const currentProjectId = getCurrentProjectId();
 
     // Initial load effect - only run once
@@ -61,31 +53,27 @@ export function ProjectList() {
         fetchProjects();
     }, [fetchProjects]);
 
-    const handleAddProject = async (project: Omit<Project, "id" | "tasks">) => {
-        const result = await addProject(project);
-        if (result) {
-            setIsAddingProject(false);
-        }
+    const handleAddNew = () => {
+        setSelectedProject(null);
+        setIsModalOpen(true);
     };
 
-    const handleUpdateProject = async (
-        project: Partial<Project> & { id: number },
-    ) => {
-        const result = await updateProject(project);
-        if (result) {
-            setIsEditingProject(false);
+    const handleEdit = (project: Project) => {
+        setSelectedProject(project);
+        setIsModalOpen(true);
+    };
 
-            // Refresh the page if we're currently on this project
-            // if (currentProjectId === project.id) {
-            //     window.dispatchEvent(new Event('refresh-gantt'));
-            // }
-        }
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedProject(null);
     };
 
     const handleDeleteProject = async (projectId: number) => {
         if (!confirm("Are you sure you want to delete this project?")) return;
 
+        const { deleteProject } = useAppStore.getState();
         const success = await deleteProject(projectId);
+
         if (success && currentProjectId === projectId) {
             // Navigate to home if we're on the deleted project's page
             router.push('/');
@@ -98,19 +86,12 @@ export function ProjectList() {
                 <h2 className="text-xl font-bold">Projects</h2>
                 <Button
                     size="sm"
-                    onClick={() => setIsAddingProject(true)}
+                    onClick={handleAddNew}
                     variant="outline"
                 >
                     <Plus className="h-4 w-4 mr-1" /> Add
                 </Button>
             </div>
-
-            {isAddingProject && (
-                <ProjectForm
-                    onSubmit={handleAddProject}
-                    onCancel={() => setIsAddingProject(false)}
-                />
-            )}
 
             <div className="space-y-2 overflow-auto mb-10">
                 {/* All Projects option */}
@@ -133,11 +114,13 @@ export function ProjectList() {
                 </Link>
 
                 {error && <p className="text-center text-red-500 py-4">{error}</p>}
+
                 {!isLoading && !error && projects.length === 0 && (
                     <p className="text-center text-neutral-500 py-4">
                         No projects found. Create one to get started!
                     </p>
                 )}
+
                 {Array.isArray(projects) &&
                     projects.map((project) => (
                         <ContextMenu key={project.id}>
@@ -161,6 +144,11 @@ export function ProjectList() {
                                                     </div>
                                                 )}
                                             </div>
+                                            {project.description && (
+                                                <CardDescription className="truncate text-xs mt-1">
+                                                    {project.description}
+                                                </CardDescription>
+                                            )}
                                         </CardHeader>
                                     </Card>
                                 </Link>
@@ -168,18 +156,10 @@ export function ProjectList() {
                             <ContextMenuContent className="bg-white shadow-lg border border-neutral-200 w-38">
                                 <ContextMenuLabel className="text-xs uppercase font-medium text-black">Project Actions</ContextMenuLabel>
                                 <ContextMenuSeparator className="border-neutral-100 border-b my-2" />
-                                <ContextMenuItem
-                                    onClick={() => {
-                                        setIsEditingProject(true);
-                                        setSelectedProject(project);
-                                    }}
-                                >
+                                <ContextMenuItem onClick={() => handleEdit(project)}>
                                     Edit
                                 </ContextMenuItem>
-
-                                <ContextMenuItem
-                                    onClick={() => handleDeleteProject(project.id)}
-                                >
+                                <ContextMenuItem onClick={() => handleDeleteProject(project.id)}>
                                     Delete
                                 </ContextMenuItem>
                             </ContextMenuContent>
@@ -187,21 +167,12 @@ export function ProjectList() {
                     ))}
             </div>
 
-            {isEditingProject && selectedProject && (
-                <ProjectForm
-                    project={selectedProject}
-                    onSubmit={(project) => {
-                        // Create a wrapper that ensures id is properly handled
-                        const projectWithId = project.id
-                            ? project
-                            : { ...project, id: selectedProject.id };
-                        return handleUpdateProject(
-                            projectWithId as Partial<Project> & { id: number },
-                        );
-                    }}
-                    onCancel={() => setIsEditingProject(false)}
-                />
-            )}
+            {/* Project Edit Modal */}
+            <ProjectEditModal
+                project={selectedProject}
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+            />
         </div>
     );
 }
