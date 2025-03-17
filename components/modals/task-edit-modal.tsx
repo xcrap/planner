@@ -64,7 +64,6 @@ export function TaskEditModal() {
         setFormData({
             name: selectedTask.name || '',
             description: selectedTask.description || '',
-            // Use exact date strings without any timezone manipulation
             startDate: startDateStr,
             endDate: endDateStr,
             completed: selectedTask.completed || false,

@@ -3,6 +3,7 @@
 import { ProjectList } from '@/components/sidebar/project-list';
 import { TaskEditModal } from '@/components/modals/task-edit-modal';
 import { useAppStore } from '@/lib/store';
+import { useEffect } from 'react';
 
 export default function DashboardLayout({
     children
@@ -12,6 +13,12 @@ export default function DashboardLayout({
 
     // Access the store's fetch method
     const fetchProjects = useAppStore(state => state.fetchProjects);
+
+    // Fetch projects at the layout level
+    useEffect(() => {
+        // This will populate the projects in the store
+        fetchProjects();
+    }, [fetchProjects]);
 
     return (
         <>

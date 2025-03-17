@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
     Card,
-    CardContent,
     CardDescription,
     CardHeader,
     CardTitle,
@@ -31,12 +30,10 @@ export function ProjectList() {
     // Use Zustand store for projects data and actions
     const {
         projects,
-        fetchProjects,
         isLoading,
         error
     } = useAppStore(state => ({
         projects: state.projects,
-        fetchProjects: state.fetchProjects,
         isLoading: state.isLoading,
         error: state.error
     }));
@@ -47,11 +44,6 @@ export function ProjectList() {
         return match ? Number.parseInt(match[1]) : null;
     };
     const currentProjectId = getCurrentProjectId();
-
-    // Initial load effect - only run once
-    useEffect(() => {
-        fetchProjects();
-    }, [fetchProjects]);
 
     const handleAddNew = () => {
         setSelectedProject(null);
