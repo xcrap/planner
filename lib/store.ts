@@ -86,10 +86,10 @@ export const useAppStore = create<AppState>()(
                             projects: [...state.projects, { ...newProject, tasks: [] }]
                         }));
                         return newProject;
-                    } else {
-                        set({ error: "Failed to add project" });
-                        return null;
                     }
+                    
+                    set({ error: "Failed to add project" });
+                    return null;
                 } catch (error) {
                     console.error("Error adding project:", error);
                     set({ error: "Error adding project" });
@@ -123,11 +123,11 @@ export const useAppStore = create<AppState>()(
                         // We already did the optimistic update, so we just ensure the data is correct
                         get().fetchProjects(); // Refresh all projects to ensure consistency
                         return updatedProject;
-                    } else {
-                        // If API call fails, revert to the previous state
-                        set({ projects: currentProjects, error: "Failed to update project" });
-                        return null;
                     }
+                    
+                    // If API call fails, revert to the previous state
+                    set({ projects: currentProjects, error: "Failed to update project" });
+                    return null;
                 } catch (error) {
                     console.error("Error updating project:", error);
                     set({ error: "Error updating project" });
@@ -153,11 +153,11 @@ export const useAppStore = create<AppState>()(
                             set({ selectedProjectId: null });
                         }
                         return true;
-                    } else {
-                        // Revert the optimistic update
-                        set({ projects: currentProjects, error: "Failed to delete project" });
-                        return false;
                     }
+                    
+                    // Revert the optimistic update
+                    set({ projects: currentProjects, error: "Failed to delete project" });
+                    return false;
                 } catch (error) {
                     console.error("Error deleting project:", error);
                     set({ error: "Error deleting project" });
@@ -234,10 +234,10 @@ export const useAppStore = create<AppState>()(
                         }
                         
                         return newTask;
-                    } else {
-                        set({ error: "Failed to add task" });
-                        return null;
                     }
+                    
+                    set({ error: "Failed to add task" });
+                    return null;
                 } catch (error) {
                     console.error("Error adding task:", error);
                     set({ error: "Error adding task" });
@@ -270,16 +270,16 @@ export const useAppStore = create<AppState>()(
                         // Ensure our local state matches server state
                         get().setTask(serverTask);
                         return serverTask;
-                    } else {
-                        // If API call fails, we should re-fetch the project to get correct data
-                        if (fullTask.projectId) {
-                            get().fetchProjectDetails(fullTask.projectId);
-                        } else {
-                            get().fetchProjects();
-                        }
-                        set({ error: "Failed to update task" });
-                        return null;
                     }
+                    
+                    // If API call fails, we should re-fetch the project to get correct data
+                    if (fullTask.projectId) {
+                        get().fetchProjectDetails(fullTask.projectId);
+                    } else {
+                        get().fetchProjects();
+                    }
+                    set({ error: "Failed to update task" });
+                    return null;
                 } catch (error) {
                     console.error("Error updating task:", error);
                     set({ error: "Error updating task" });
@@ -318,16 +318,16 @@ export const useAppStore = create<AppState>()(
                     if (response.ok) {
                         // Task was successfully deleted, state is already updated
                         return true;
-                    } else {
-                        // Revert by re-fetching project data
-                        if (task.projectId) {
-                            get().fetchProjectDetails(task.projectId);
-                        } else {
-                            get().fetchProjects();
-                        }
-                        set({ error: "Failed to delete task" });
-                        return false;
                     }
+                    
+                    // Revert by re-fetching project data
+                    if (task.projectId) {
+                        get().fetchProjectDetails(task.projectId);
+                    } else {
+                        get().fetchProjects();
+                    }
+                    set({ error: "Failed to delete task" });
+                    return false;
                 } catch (error) {
                     console.error("Error deleting task:", error);
                     set({ error: "Error deleting task" });
@@ -389,10 +389,10 @@ export const useAppStore = create<AppState>()(
                         });
                         
                         return projectData;
-                    } else {
-                        set({ error: "Failed to fetch project details", isLoading: false });
-                        return null;
                     }
+                    
+                    set({ error: "Failed to fetch project details", isLoading: false });
+                    return null;
                 } catch (error) {
                     console.error("Error fetching project details:", error);
                     set({ error: "Error fetching project details", isLoading: false });

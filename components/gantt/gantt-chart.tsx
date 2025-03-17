@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button"
 import { addDays, format, differenceInDays, isWeekend } from 'date-fns';
 import { TaskBar } from '@/components/gantt/task-bar';
@@ -103,34 +103,27 @@ export function GanttChart({
 
     // Now the useEffect can reference calculateTimeRange safely
     useEffect(() => {
-        // Initial calculation 
+        // Initial calculation
         calculateTimeRange(tasks);
 
-        // Use a single callback that runs whenever the state changes
-        const unsubscribe = useAppStore.subscribe(
-            (state) => {
-                // Return string representation of tasks for stable comparison
-                return JSON.stringify(
-                    projectId ? state.getTasksByProjectId(projectId) : state.getAllTasks()
-                );
-            },
-            (tasksJSON: string) => {
-                // Parse the JSON back to tasks
-                const newTasks = JSON.parse(tasksJSON) as Task[];
-                calculateTimeRange(newTasks);
-            }
-        );
+        // Set up the subscription
+        const unsubscribe = useAppStore.subscribe((state) => {
+            const newTasks = projectId
+                ? state.getTasksByProjectId(projectId)
+                : state.getAllTasks();
+
+            calculateTimeRange(newTasks);
+        });
 
         return unsubscribe;
-    }, [projectId, calculateTimeRange]);  // Remove tasks from dependency array as we handle changes via subscription
+    }, [projectId, calculateTimeRange]);
 
     const handleTaskDragStart = (taskId: number) => {
         setDraggingTaskId(taskId);
         setDragPreviewOffset(0);
     };
 
-    const handleTaskDrag = (taskId: number, daysOffset: number) => {
-        // Just update the preview offset, don't make API call yet
+    const handleTaskDrag = (_taskId: number, daysOffset: number) => {
         setDragPreviewOffset(daysOffset);
     };
 
@@ -178,7 +171,7 @@ export function GanttChart({
         setResizePreviewOffset(0);
     };
 
-    const handleTaskResize = (taskId: number, daysOffset: number) => {
+    const handleTaskResize = (_taskId: number, daysOffset: number) => {
         // Just update the preview offset, don't make API call
         setResizePreviewOffset(daysOffset);
     };
