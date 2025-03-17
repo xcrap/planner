@@ -14,7 +14,7 @@ A Next.js application for managing projects and tasks with a Gantt chart view.
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/gantt-chart-project.git
+   git clone https://github.com/xcrap/planner.git
    cd gantt-chart-project
    ```
 
