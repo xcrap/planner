@@ -1,8 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { ProjectList } from '@/components/sidebar/project-list';
-import { initializeDatabase } from '@/lib/db';
 import { TaskProvider } from '@/contexts/task-context';
 import { TaskEditModal } from '@/components/modals/task-edit-modal';
 import { useAppStore } from '@/lib/store';
@@ -12,31 +10,9 @@ export default function DashboardLayout({
 }: {
     children: React.ReactNode
 }) {
-    const [dbInitialized, setDbInitialized] = useState(false);
 
     // Access the store's fetch method
     const fetchProjects = useAppStore(state => state.fetchProjects);
-
-    useEffect(() => {
-        // Initialize the database and load initial data
-        const init = async () => {
-            await initializeDatabase();
-            // Load projects data into our store
-            await fetchProjects();
-            setDbInitialized(true);
-        };
-
-        init();
-    }, [fetchProjects]);
-
-    const handleTasksChanged = () => {
-        // Dispatch an event that components can listen for
-        // window.dispatchEvent(new Event('refresh-gantt'));
-    };
-
-    if (!dbInitialized) {
-        return <div className="flex items-center justify-center h-screen">Initializing database...</div>;
-    }
 
     return (
         <TaskProvider>
