@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
+import { Button } from "@/components/ui/button"
 import { addDays, format, differenceInDays, parseISO, isWeekend } from 'date-fns';
 import { TaskBar } from '@/components/gantt/task-bar';
 import { Timeline } from '@/components/gantt/timeline';
 import { useTaskContext } from '@/contexts/task-context';
+import { ZoomIn, ZoomOut } from 'lucide-react';
 import type { Task, Project } from '@/types/task';
 
 // Move the function outside the component so it's not recreated on each render
@@ -331,7 +333,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             if (isAllProjectsView) {
                 await fetchAllProjects();
             }
-            window.dispatchEvent(new Event('tasks-changed'));
+            // window.dispatchEvent(new Event('tasks-changed'));
             window.dispatchEvent(new Event('refresh-gantt'));
         } catch (error) {
             console.error('Error updating task dates:', error);
@@ -436,28 +438,16 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">{project.name}</h2>
                 <div className="flex items-center space-x-4">
-                    <button
-                        type="button"
-                        onClick={handleAddTask}
-                        className="bg-blue-600 text-white py-1 px-3 rounded hover:bg-blue-700"
-                    >
+                    <Button variant="outline" onClick={handleAddTask}>
                         Add Task
-                    </button>
+                    </Button>
                     <div className="flex items-center space-x-2">
-                        <button
-                            type="button"
-                            onClick={() => setDayWidth(prev => Math.max(30, prev - 10))}
-                            className="p-1 rounded hover:bg-neutral-200"
-                        >
-                            Zoom Out
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setDayWidth(prev => Math.min(120, prev + 10))}
-                            className="p-1 rounded hover:bg-neutral-200"
-                        >
-                            Zoom In
-                        </button>
+                        <Button variant="outline" size="icon" onClick={() => setDayWidth(prev => Math.max(30, prev - 10))}>
+                            <ZoomOut size={20} />
+                        </Button>
+                        <Button variant="outline" size="icon" onClick={() => setDayWidth(prev => Math.min(120, prev + 10))}>
+                            <ZoomIn size={20} />
+                        </Button>
                     </div>
                 </div>
             </div>
@@ -494,12 +484,9 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                         })}
                         {/* Today indicator line that spans entire chart */}
                         {todayOffset !== undefined && (
-                            <div
-                                className="absolute top-0 bottom-0 w-[2px] bg-yellow-500/30 z-5"
-                                style={{
-                                    left: `${(todayOffset * dayWidth) + (dayWidth / 2)}px`, // Center in column
-                                }}
-                            />
+                            <div className="absolute top-0 bottom-0 w-[2px] bg-yellow-500/30 z-20" style={{
+                                left: `${(todayOffset * dayWidth) + (dayWidth / 2)}px`, // Center in column
+                            }} />
                         )}
                     </div>
 

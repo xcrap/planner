@@ -135,7 +135,7 @@ export function TaskEditModal() {
                 setSelectedTask(null);
 
                 // Dispatch a custom event to notify all components that tasks have changed
-                window.dispatchEvent(new Event('tasks-changed'));
+                // window.dispatchEvent(new Event('tasks-changed'));
                 window.dispatchEvent(new Event('refresh-gantt'));
             })
             .catch(error => {
@@ -178,7 +178,7 @@ export function TaskEditModal() {
                             <SelectTrigger className="w-full">
                                 <SelectValue placeholder="Select a project" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent className="bg-white border border-neutral-200 shadow-lg">
                                 {projects.map((project) => (
                                     <SelectItem key={project.id} value={String(project.id)}>
                                         {project.name}
@@ -204,9 +204,10 @@ export function TaskEditModal() {
                                         {formData.startDate ? format(new Date(`${formData.startDate}T12:00:00Z`), "PPP") : "Pick a date"}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto p-0 border-0 shadow-lg" align="start">
                                     <Calendar
                                         mode="single"
+                                        className="bg-white border border-neutral-200 rounded"
                                         selected={getCalendarSelectedDate(formData.startDate)}
                                         onSelect={(date) => {
                                             if (date) {
@@ -244,9 +245,10 @@ export function TaskEditModal() {
                                         {formData.endDate ? format(new Date(`${formData.endDate}T12:00:00Z`), "PPP") : "Pick a date"}
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
+                                <PopoverContent className="w-auto p-0 border-0 shadow-lg" align="start">
                                     <Calendar
                                         mode="single"
+                                        className="bg-white border border-neutral-200 rounded"
                                         selected={getCalendarSelectedDate(formData.endDate)}
                                         onSelect={(date) => {
                                             if (date) {
@@ -289,7 +291,7 @@ export function TaskEditModal() {
                                         setSelectedTask(null);
 
                                         // Notify components that tasks have changed
-                                        window.dispatchEvent(new Event('tasks-changed'));
+                                        // window.dispatchEvent(new Event('tasks-changed'));
                                         window.dispatchEvent(new Event('refresh-gantt'));
                                     })
                                     .catch(error => {

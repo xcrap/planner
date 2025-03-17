@@ -51,12 +51,12 @@ export default function Home() {
 
             <main className="flex grow overflow-hidden">
                 {/* Sidebar */}
-                <div className="w-96 flex flex-col overflow-y-auto ml-6 mr-3 mb-4">
+                <div className="w-96 flex flex-col overflow-y-auto ml-6 mr-6 mb-4">
                     <ProjectList onSelectProject={handleSelectProject} />
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 overflow-hidden mb-4 ml-3 mr-6">
+                <div className="flex-1 overflow-hidden mb-4 ml-6 mr-6">
                     <GanttChart
                         project={selectedProject}
                         onTasksChanged={handleTasksChanged}

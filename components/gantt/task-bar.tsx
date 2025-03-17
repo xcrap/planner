@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Task } from '@/types/task';
+import { Check } from 'lucide-react';
 
 type TaskBarProps = {
     task: Task;
@@ -157,22 +158,18 @@ export function TaskBar({
     const getTaskStyle = () => ({
         left: `${left}px`,
         width: `${width}px`,
-        backgroundColor: task.completed ? '#8dac97' : projectColor,
+        backgroundColor: task.completed ? '#a3e635' : projectColor,
         opacity: isDragging || isResizing ? 0.7 : 1,
         cursor: isDragging ? 'grabbing' : 'grab',
         transition: isDragging || isResizing ? 'none' : 'box-shadow 0.2s ease',
-        boxShadow: isResizing || hoverEdge ? '0 0 8px rgba(0, 0, 0, 0.3)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
+        // boxShadow: isResizing || hoverEdge ? '0 0 8px rgba(0, 0, 0, 0.3)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
     });
-
-    // Extract readable dates for display
-    const startDateDisplay = formatUTCDate(task.startDate);
-    const endDateDisplay = formatUTCDate(task.endDate);
 
     // Determine if resize handles should be visible
     const showResizeHandles = isHovering || isResizing;
 
     return (
-        <div className="relative flex items-center h-16 mb-1 group border-b border-gray-200">
+        <div className="relative flex items-center h-16 mb-1 group border-b border-gray-200 last:border-b-0">
             <div className="px-4 w-60 truncate font-medium text-base">
                 {/* Show project name when in All Projects view */}
                 {isAllProjectsView ? (
@@ -194,7 +191,7 @@ export function TaskBar({
             <div
                 ref={barRef}
                 className={`relative rounded-full text-white px-4 py-1 flex items-center h-10 z-10
-                    ${isResizing ? 'ring-2 ring-blue-400' : ''}`}
+                    ${isResizing ? 'ring-2 ring-black' : ''} ${task.completed ? 'shadow-lime-400/50 shadow-lg border-1 border-lime-600' : ''}`}
                 style={getTaskStyle()}
                 onMouseDown={handleDragStart}
                 onClick={handleClick}
@@ -222,28 +219,33 @@ export function TaskBar({
                     </div>
                 )}
 
-                <span className="truncate text-sm select-none">
-                    {task.name}
+                <span className={`flex items-center truncate text-sm select-none ${task.completed ? 'text-black' : ''}`}>
+                    {task.completed && (
+                        <div className="absolute flex items-center justify-center size-7 border-2 border-black/50 bg-black/10 rounded-full -ml-2 mr-2 p-1 text-black"><Check /></div>
+                    )}
+                    <span className={`${task.completed ? 'pl-8' : ''}`}>{task.name}</span>
                 </span>
 
                 {/* Resize handle - right edge */}
-                {showResizeHandles && (
-                    <div
-                        className={`absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
+                {
+                    showResizeHandles && (
+                        <div
+                            className={`absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
                             ${(isResizing && resizeEdge === 'end') || hoverEdge === 'end'
-                                ? 'bg-black/20 w-4 -mr-1 rounded-r-full'
-                                : 'opacity-0 hover:opacity-100'}`}
-                        onMouseDown={(e) => handleResizeStart(e, 'end')}
-                        onMouseEnter={() => handleResizeHover('end')}
-                        onMouseLeave={() => handleResizeHover(null)}
-                    >
-                        {/* Visual grip for resize handle */}
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="h-4 border-l border-r border-white opacity-70 mr-[6px]" />
+                                    ? 'bg-black/20 w-4 -mr-1 rounded-r-full'
+                                    : 'opacity-0 hover:opacity-100'}`}
+                            onMouseDown={(e) => handleResizeStart(e, 'end')}
+                            onMouseEnter={() => handleResizeHover('end')}
+                            onMouseLeave={() => handleResizeHover(null)}
+                        >
+                            {/* Visual grip for resize handle */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="h-4 border-l border-r border-white opacity-70 mr-[6px]" />
+                            </div>
                         </div>
-                    </div>
-                )}
-            </div>
-        </div>
+                    )
+                }
+            </div >
+        </div >
     );
 }
