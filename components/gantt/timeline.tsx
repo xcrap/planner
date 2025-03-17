@@ -1,4 +1,4 @@
-import { isWeekend, isToday } from 'date-fns';
+import { isWeekend } from 'date-fns';
 
 type TimelineProps = {
     timeRange: Date[];
@@ -32,26 +32,26 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
     };
 
     return (
-        <div className="sticky top-0 bg-white z-10 border-b border-neutral-200">
+        <div className="sticky top-0 z-10">
             <div className="flex">
                 {/* Empty space for task names */}
-                <div className="w-60 shrink-0 border-r border-neutral-200" />
+                <div className="w-60 shrink-0" />
 
                 {/* Days */}
                 <div className="flex">
                     {timeRange.map((date) => {
                         const isCurrentDay = isDateToday(date);
                         // Today's styling takes precedence over weekend styling
-                        const bgColorClass = isCurrentDay ? 'bg-yellow-50' : (isWeekend(date) ? 'bg-neutral-50' : '');
+                        const bgColorClass = isCurrentDay ? 'bg-yellow-50' : (isWeekend(date) ? 'bg-neutral-100' : '');
 
                         return (
                             <div
                                 key={date.getTime()}
-                                className={`flex flex-col items-center justify-center border-r border-neutral-200 
+                                className={`flex flex-col items-center justify-center rounded-t-md border-b border-neutral-100 
                                     ${bgColorClass} ${isCurrentDay ? 'border-yellow-200' : ''}`}
                                 style={{ width: `${dayWidth}px`, height: '60px' }}
                             >
-                                <div className={`text-xs ${isCurrentDay ? 'text-yellow-700' : ''}`}>
+                                <div className={`text-xs  ${isCurrentDay ? 'text-yellow-700' : ''}`}>
                                     {getUTCDayOfWeek(date)}
                                 </div>
                                 <div className={`text-xs font-bold mt-0.5  ${isCurrentDay ? 'text-yellow-700' : ''}`}>

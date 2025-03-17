@@ -56,7 +56,7 @@ export default function Home() {
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 overflow-hidden mb-4 ml-3 mr-6 border border-neutral-200 rounded-xl bg-white">
+                <div className="flex-1 overflow-hidden mb-4 ml-3 mr-6">
                     <GanttChart
                         project={selectedProject}
                         onTasksChanged={handleTasksChanged}

@@ -369,12 +369,6 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
         setSelectedTask(newTask as Task); // Cast to Task since we know this is a new task
     };
 
-    // Get today's date in UTC format for highlighting
-    // const getTodayInUTC = () => {
-    //     const today = new Date();
-    //     return new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-    // };
-
     // Calculate today's offset from the start of the time range
     const calculateTodayOffset = () => {
         if (timeRange.length === 0) return undefined;
@@ -439,7 +433,7 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2 border-b">
+            <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">{project.name}</h2>
                 <div className="flex items-center space-x-4">
                     <button
@@ -468,14 +462,17 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                 </div>
             </div>
 
-            <div className="flex overflow-auto" ref={containerRef}>
+            <div className="relative flex overflow-auto " ref={containerRef}>
+
                 <div
-                    className="relative flex flex-col"
+                    className="relative flex flex-col "
                     style={{
                         width: `${Math.max(2000, timeRange.length * dayWidth + 200)}px`,
                     }}
                 >
                     <Timeline timeRange={timeRange} dayWidth={dayWidth} />
+                    {/* Special White Cover for the Gantt Chart */}
+                    <div className="absolute left-0 right-0 bottom-0 top-[60px] bg-white -z-10 rounded-xl border border-neutral-200" />
 
                     {/* Day columns that span the entire task area */}
                     <div className="absolute left-60 right-0 top-[60px] bottom-0 z-0">
@@ -601,7 +598,6 @@ export function GanttChart({ project, onTasksChanged }: GanttChartProps) {
                                         onReorder={(taskId: number, newOrder: number) => {
                                             console.log("Reordering task", taskId, "to", newOrder);
                                         }}
-
                                         isAllProjectsView={isAllProjectsView}
                                     />
                                 );
