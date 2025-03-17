@@ -36,7 +36,6 @@
         "**/*.tsx"
     ],
     "exclude": [
-        "node_modules",
-        "backups"
+        "node_modules"
     ]
 }
