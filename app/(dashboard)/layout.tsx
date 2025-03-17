@@ -2,40 +2,36 @@
 
 import { useEffect, useState } from 'react';
 import { ProjectList } from '@/components/sidebar/project-list';
-import { GanttChart } from '@/components/gantt/gantt-chart';
 import { initializeDatabase } from '@/lib/db';
 import { TaskProvider } from '@/contexts/task-context';
 import { TaskEditModal } from '@/components/modals/task-edit-modal';
-import type { Project } from '@/types/task';
+import { useAppStore } from '@/lib/store';
 
-export default function Home() {
-    const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+export default function DashboardLayout({
+    children
+}: {
+    children: React.ReactNode
+}) {
     const [dbInitialized, setDbInitialized] = useState(false);
 
+    // Access the store's fetch method
+    const fetchProjects = useAppStore(state => state.fetchProjects);
+
     useEffect(() => {
-        // Initialize the database on app startup
+        // Initialize the database and load initial data
         const init = async () => {
             await initializeDatabase();
+            // Load projects data into our store
+            await fetchProjects();
             setDbInitialized(true);
         };
 
         init();
-    }, []);
+    }, [fetchProjects]);
 
-    const handleSelectProject = (project: Project) => {
-        setSelectedProject(project);
-    };
-
-    const handleTasksChanged = async () => {
-        if (selectedProject && selectedProject.id > 0) {  // Add validation check
-            try {
-                const response = await fetch(`/api/projects/${selectedProject.id}`);
-                const updatedProject = await response.json();
-                setSelectedProject(updatedProject);
-            } catch (error) {
-                console.error('Error refreshing project data:', error);
-            }
-        }
+    const handleTasksChanged = () => {
+        // Dispatch an event that components can listen for
+        // window.dispatchEvent(new Event('refresh-gantt'));
     };
 
     if (!dbInitialized) {
@@ -43,7 +39,7 @@ export default function Home() {
     }
 
     return (
-        <TaskProvider onTasksChanged={handleTasksChanged}>
+        <TaskProvider>
             {/* header */}
             <header className="flex items-center justify-between p-6 text-black">
                 <h1 className="text-2xl font-semibold">Gantt Task Planner</h1>
@@ -52,15 +48,12 @@ export default function Home() {
             <main className="flex grow overflow-hidden">
                 {/* Sidebar */}
                 <div className="w-96 flex flex-col overflow-y-auto ml-6 mr-6 mb-4">
-                    <ProjectList onSelectProject={handleSelectProject} />
+                    <ProjectList />
                 </div>
 
-                {/* Main Content */}
+                {/* Main Content - Children render here */}
                 <div className="flex-1 overflow-hidden mb-4 ml-6 mr-6">
-                    <GanttChart
-                        project={selectedProject}
-                        onTasksChanged={handleTasksChanged}
-                    />
+                    {children}
                 </div>
 
                 <TaskEditModal />

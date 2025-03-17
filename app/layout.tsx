@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
     title: 'Gantt Task Planner',
-    description: 'Managing tasks and proejcts with Gantt charts',
+    description: 'Managing tasks and projects with Gantt charts',
 }
 
 export default function RootLayout({

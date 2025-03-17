@@ -21,7 +21,7 @@ type TaskBarProps = {
     onResizeEnd: () => void;
     onTaskClick: (task: Task) => void;
     onReorder: (taskId: number, newOrder: number) => void;
-    isAllProjectsView?: boolean; // Add this new prop
+    isAllProjectsView?: boolean; // We'll keep this prop for compatibility but change how we use it
 };
 
 export function TaskBar({
@@ -170,8 +170,8 @@ export function TaskBar({
     return (
         <div className="relative flex items-center h-16 mb-1 group border-b border-gray-200 last:border-b-0">
             <div className="px-4 w-60 truncate font-medium text-base">
-                {/* Show project name when in All Projects view */}
-                {isAllProjectsView ? (
+                {/* Show project name when in all projects view or when projectName is available */}
+                {isAllProjectsView || 'projectName' in task ? (
                     <div className="flex flex-col space-y-1">
                         <span>{task.name}</span>
                         <span className="text-xs text-neutral-500 flex items-center">
@@ -179,7 +179,7 @@ export function TaskBar({
                                 className="inline-block w-2 h-2 rounded-full mr-1"
                                 style={{ backgroundColor: projectColor }}
                             />
-                            {task.projectName || `Project #${task.projectId}`}
+                            {(task).projectName || `Project #${task.projectId}`}
                         </span>
                     </div>
                 ) : (

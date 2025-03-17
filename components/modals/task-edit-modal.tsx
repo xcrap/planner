@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useTaskContext } from "@/contexts/task-context";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +15,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import { useAppStore } from "@/lib/store";
 
 export function TaskEditModal() {
     const { selectedTask, setSelectedTask, handleTaskUpdate, handleTaskDelete } = useTaskContext();
@@ -26,25 +27,13 @@ export function TaskEditModal() {
         completed: false,
         projectId: 0,
     });
-    const [projects, setProjects] = useState<Array<{ id: number, name: string }>>([]);
     const [startDateOpen, setStartDateOpen] = useState(false);
     const [endDateOpen, setEndDateOpen] = useState(false);
 
-    // Normalize date to UTC
-    // Replace your normalizeToUTCDate function with this corrected version:
-    const normalizeToUTCDate = (date: string) => {
-        // If date is in YYYY-MM-DD format, parse it correctly to avoid timezone issues
-        if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-            const [year, month, day] = date.split('-').map(Number);
-            return new Date(Date.UTC(year, month - 1, day)); // Month is 0-indexed in JS
-        }
+    // Get projects from store
+    const projects = useAppStore(state => state.projects);
 
-        // For other formats, use the previous approach
-        const d = new Date(date);
-        return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-    };
-
-    // Add this function after your normalizeToUTCDate function
+    // Add this function
     const getCalendarSelectedDate = (dateString: string) => {
         if (!dateString) return undefined;
 
@@ -54,26 +43,6 @@ export function TaskEditModal() {
         // Create a local date without time components
         return new Date(year, month - 1, day);
     };
-
-    // Fetch all projects for the dropdown
-    const fetchProjects = useCallback(async () => {
-        try {
-            const response = await fetch('/api/projects');
-            if (response.ok) {
-                const data = await response.json();
-                setProjects(data);
-            } else {
-                console.error('Failed to fetch projects');
-            }
-        } catch (error) {
-            console.error('Error fetching projects:', error);
-        }
-    }, []);
-
-    useEffect(() => {
-        // Fetch projects when the component mounts
-        fetchProjects();
-    }, [fetchProjects]);
 
     useEffect(() => {
         if (!selectedTask) return;
@@ -109,11 +78,9 @@ export function TaskEditModal() {
         e.preventDefault();
 
         if (!formData.projectId) {
-            alert("Please select a project"); // Add user feedback
+            alert("Please select a project");
             return;
         }
-
-        // console.log('Submitting form data:', formData);
 
         // Validate project ID before proceeding
         if (!formData.projectId || formData.projectId <= 0) {
@@ -130,14 +97,6 @@ export function TaskEditModal() {
         };
 
         handleTaskUpdate(updatedTask)
-            .then(() => {
-                // Close the modal before task change propagation
-                setSelectedTask(null);
-
-                // Dispatch a custom event to notify all components that tasks have changed
-                // window.dispatchEvent(new Event('tasks-changed'));
-                window.dispatchEvent(new Event('refresh-gantt'));
-            })
             .catch(error => {
                 console.error("Failed to update task:", error);
             });
@@ -287,12 +246,8 @@ export function TaskEditModal() {
                             onClick={() => {
                                 handleTaskDelete(selectedTask.id)
                                     .then(() => {
-                                        // Close the modal
-                                        setSelectedTask(null);
-
-                                        // Notify components that tasks have changed
-                                        // window.dispatchEvent(new Event('tasks-changed'));
-                                        window.dispatchEvent(new Event('refresh-gantt'));
+                                        // Task will be deleted from store by the handleTaskDelete function
+                                        // window.dispatchEvent(new Event('refresh-gantt'));
                                     })
                                     .catch(error => {
                                         console.error("Failed to delete task:", error);

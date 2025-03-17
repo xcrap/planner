@@ -1,15 +1,6 @@
 import { createContext, useState, useContext, ReactNode } from 'react';
-
-type Task = {
-    id: number;
-    name: string;
-    description: string | null;
-    startDate: string;
-    endDate: string;
-    completed: boolean;
-    order: number;
-    projectId: number;
-};
+import type { Task } from '@/types/task';
+import { useAppStore } from '@/lib/store';
 
 interface TaskContextType {
     selectedTask: Task | null;
@@ -22,31 +13,32 @@ const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 interface TaskProviderProps {
     children: ReactNode;
-    onTasksChanged?: () => void;
 }
 
-export function TaskProvider({ children, onTasksChanged }: TaskProviderProps) {
+export function TaskProvider({ children }: TaskProviderProps) {
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-    
+    const updateTask = useAppStore(state => state.updateTask);
+    const deleteTask = useAppStore(state => state.deleteTask);
+    const addTask = useAppStore(state => state.addTask);
+
     const handleTaskUpdate = async (task: Task) => {
         try {
-            const response = await fetch(`/api/tasks/${task.id || ''}`, {
-                method: task.id ? 'PUT' : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(task)
-            });
-            
-            if (response.ok) {
-                // First call onTasksChanged to update the project data
-                if (onTasksChanged) {
-                    await onTasksChanged(); // Wait for this to complete
-                }
-                
-                // Close the modal after data update is done
+            let result;
+
+            if (task.id) {
+                // Update existing task
+                result = await updateTask(task);
+            } else {
+                // Create new task
+                result = await addTask(task);
+            }
+
+            if (result) {
+                // Close the modal after successful update
                 setSelectedTask(null);
+
                 return Promise.resolve();
             } else {
-                console.error('Error updating task:', await response.text());
                 return Promise.reject('Failed to update task');
             }
         } catch (error) {
@@ -54,21 +46,16 @@ export function TaskProvider({ children, onTasksChanged }: TaskProviderProps) {
             return Promise.reject(error);
         }
     };
-    
+
     const handleTaskDelete = async (taskId: number) => {
         if (!taskId) return Promise.resolve();
-        
+
         try {
-            const response = await fetch(`/api/tasks/${taskId}`, {
-                method: 'DELETE'
-            });
-            
-            if (response.ok) {
+            const success = await deleteTask(taskId);
+
+            if (success) {
                 setSelectedTask(null);
-                // Call onTasksChanged with a slight delay
-                if (onTasksChanged) {
-                    setTimeout(onTasksChanged, 0);
-                }
+
                 return Promise.resolve();
             } else {
                 return Promise.reject('Failed to delete task');
@@ -78,7 +65,7 @@ export function TaskProvider({ children, onTasksChanged }: TaskProviderProps) {
             return Promise.reject(error);
         }
     };
-    
+
     return (
         <TaskContext.Provider value={{
             selectedTask,
