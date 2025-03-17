@@ -162,7 +162,6 @@ export function TaskBar({
         opacity: isDragging || isResizing ? 0.7 : 1,
         cursor: isDragging ? 'grabbing' : 'grab',
         transition: isDragging || isResizing ? 'none' : 'box-shadow 0.2s ease',
-        // boxShadow: isResizing || hoverEdge ? '0 0 8px rgba(0, 0, 0, 0.3)' : '0 2px 4px rgba(0, 0, 0, 0.1)',
     });
 
     // Determine if resize handles should be visible
