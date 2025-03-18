@@ -8,14 +8,9 @@ type GanttChartContainerProps = {
 };
 
 export function GanttChartContainer({ projectId = null }: GanttChartContainerProps) {
-    // Use the store for data and actions
-    const {
-        projects,
-        isLoading,
-    } = useAppStore(state => ({
-        projects: state.projects,
-        isLoading: state.isLoading,
-    }));
+    // Fix: Use separate selectors instead of returning an object
+    const projects = useAppStore(state => state.projects);
+    const isLoading = useAppStore(state => state.isLoading);
 
     return (
         <>

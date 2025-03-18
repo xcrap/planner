@@ -27,16 +27,10 @@ export function ProjectList() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
-    // Use Zustand store for projects data and actions
-    const {
-        projects,
-        isLoading,
-        error
-    } = useAppStore(state => ({
-        projects: state.projects,
-        isLoading: state.isLoading,
-        error: state.error
-    }));
+    // Fix: Use separate selectors for each piece of state
+    const projects = useAppStore(state => state.projects);
+    const isLoading = useAppStore(state => state.isLoading);
+    const error = useAppStore(state => state.error);
 
     // Get the current projectId from the pathname
     const getCurrentProjectId = (): number | null => {

@@ -1,4 +1,6 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+'use client';
+
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button"
 import { addDays, format, differenceInDays, isWeekend } from 'date-fns';
 import { TaskBar } from '@/components/gantt/task-bar';
@@ -16,7 +18,7 @@ const normalizeToUTCDate = (date: string) => {
 type GanttChartProps = {
     projects: Project[];
     projectId: number | null;
-    onTasksChanged?: () => void; // Make optional with '?'
+    onTasksChanged?: () => void;
 };
 
 export function GanttChart({
@@ -37,19 +39,73 @@ export function GanttChart({
 
     // Access store data with proper selectors
     const updateTask = useAppStore(state => state.updateTask);
-    // Remove the unused getProjectById variable
-    // Use updateTask for reordering since there's no dedicated reorderTask function
-    const reorderTask = updateTask;
 
-    // Get current project directly with selector pattern
-    const currentProject = useAppStore(state =>
-        projectId ? state.getProjectById(projectId) : null
-    );
+    // Get the store state directly using a ref to prevent dependency cycles
+    // This is a stable reference to the store functions
+    const storeRef = useRef({
+        getAllTasks: useAppStore.getState().getAllTasks,
+        getTasksByProjectId: useAppStore.getState().getTasksByProjectId,
+        getProjectById: useAppStore.getState().getProjectById
+    });
 
-    // Get tasks with proper selector to auto-update
-    const tasks = useAppStore(state =>
-        projectId ? state.getTasksByProjectId(projectId) : state.getAllTasks()
-    );
+    // This will hold our derived tasks without causing re-renders
+    const tasksRef = useRef<Task[]>([]);
+
+    // This state is just to trigger re-renders when tasks change
+    const [taskVersion, setTaskVersion] = useState(0);
+
+    // Subscribe to store changes
+    useEffect(() => {
+        return useAppStore.subscribe((state) => {
+            const newTasks = projectId
+                ? state.getTasksByProjectId(projectId)
+                : state.getAllTasks();
+
+            // Compare tasks and update if they've changed
+            if (JSON.stringify(newTasks) !== JSON.stringify(tasksRef.current)) {
+                tasksRef.current = newTasks;
+                setTaskVersion(v => v + 1); // Trigger re-render
+            }
+        });
+    }, [projectId]);
+
+    // Initialize tasks on first render and when projectId changes
+    useEffect(() => {
+        tasksRef.current = projectId
+            ? storeRef.current.getTasksByProjectId(projectId)
+            : storeRef.current.getAllTasks();
+        setTaskVersion(v => v + 1);
+    }, [projectId]);
+
+    // Access tasks from the ref
+    const tasks = tasksRef.current;
+
+    // Get current project with the same pattern
+    const currentProjectRef = useRef<Project | null>(null);
+    const [projectVersion, setProjectVersion] = useState(0);
+
+    useEffect(() => {
+        if (projectId) {
+            currentProjectRef.current = storeRef.current.getProjectById(projectId) || null;
+            setProjectVersion(v => v + 1);
+        } else {
+            currentProjectRef.current = null;
+        }
+    }, [projectId]);
+
+    useEffect(() => {
+        if (projectId) {
+            return useAppStore.subscribe((state) => {
+                const newProject = state.getProjectById(projectId);
+                if (JSON.stringify(newProject) !== JSON.stringify(currentProjectRef.current)) {
+                    currentProjectRef.current = newProject || null;
+                    setProjectVersion(v => v + 1);
+                }
+            });
+        }
+    }, [projectId]);
+
+    const currentProject = currentProjectRef.current;
 
     // Memoize calculateTimeRange with useCallback to prevent recreation on every render
     const calculateTimeRange = useCallback((taskList: Task[]) => {
@@ -100,34 +156,10 @@ export function GanttChart({
         setTimeRange(range);
     }, []); // Empty dependency array is correct here
 
-    // Create a stable memoized reference to the tasks
-    const tasksRef = useRef(tasks);
-
-    // Update the ref when tasks change
+    // Simplified effect to update time range when tasks change
     useEffect(() => {
-        tasksRef.current = tasks;
-    }, [tasks]);
-
-    // Now the useEffect can reference calculateTimeRange safely
-    useEffect(() => {
-        // Initial calculation
-        calculateTimeRange(tasksRef.current);
-
-        // Set up the subscription to handle updates from store
-        const unsubscribe = useAppStore.subscribe((state) => {
-            const newTasks = projectId
-                ? state.getTasksByProjectId(projectId)
-                : state.getAllTasks();
-
-            // Use the reference to compare with current tasks
-            // This avoids the dependency issue while still being reactive
-            if (JSON.stringify(newTasks) !== JSON.stringify(tasksRef.current)) {
-                calculateTimeRange(newTasks);
-            }
-        });
-
-        return unsubscribe;
-    }, [projectId, calculateTimeRange]); // Only depend on projectId and calculateTimeRange
+        calculateTimeRange(tasks);
+    }, [tasks, calculateTimeRange]);
 
     const handleTaskDragStart = (taskId: number) => {
         setDraggingTaskId(taskId);
@@ -463,7 +495,7 @@ export function GanttChart({
                                         onTaskClick={handleTaskClick}
                                         projectColor={taskColor}
                                         onReorder={(taskId: number, newOrder: number) => {
-                                            reorderTask({
+                                            updateTask({
                                                 id: taskId,
                                                 order: newOrder
                                             });
