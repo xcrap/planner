@@ -8,7 +8,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Layers } from "lucide-react";
+import { Plus, Layers, Edit, Trash2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import {
     ContextMenu,
@@ -20,12 +20,25 @@ import {
 import { ContextMenuSeparator } from "@radix-ui/react-context-menu";
 import type { Project } from "@/types/task";
 import { ProjectEditModal } from "@/components/modals/project-edit-modal";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function ProjectList() {
     const router = useRouter();
     const params = useParams();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    const [hoveredProjectId, setHoveredProjectId] = useState<number | null>(null);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
 
     // Fix: Use separate selectors for each piece of state
     const projects = useAppStore(state => state.projects);
@@ -34,7 +47,7 @@ export function ProjectList() {
 
     // Get the current projectId from the pathname    
     const currentProjectId = (): number | null => {
-        const projectId = params.projectId;
+        const projectId = params.id;
         return projectId ? Number(projectId) : null;
     };
 
@@ -53,16 +66,24 @@ export function ProjectList() {
         setSelectedProject(null);
     };
 
-    const handleDeleteProject = async (projectId: number) => {
-        if (!confirm("Are you sure you want to delete this project?")) return;
+    const handleDeleteClick = (projectId: number) => {
+        setProjectToDelete(projectId);
+        setIsDeleteDialogOpen(true);
+    };
 
-        const { deleteProject } = useAppStore.getState();
-        const success = await deleteProject(projectId);
+    const handleConfirmDelete = async () => {
+        if (projectToDelete) {
+            const { deleteProject } = useAppStore.getState();
+            const success = await deleteProject(projectToDelete);
 
-        if (success && currentProjectId() === projectId) {
-            // Navigate to home if we're on the deleted project's page
-            router.push('/');
+            if (success && currentProjectId() === projectToDelete) {
+                // Navigate to home if we're on the deleted project's page
+                router.push('/');
+            }
         }
+
+        setIsDeleteDialogOpen(false);
+        setProjectToDelete(null);
     };
 
     return (
@@ -82,7 +103,7 @@ export function ProjectList() {
                 {/* All Projects option */}
                 <Link href="/" className="block">
                     <Card
-                        className={`cursor-pointer ${!currentProjectId ? "bg-neutral-900 text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm"} transition`}
+                        className={`cursor-pointer ${!currentProjectId() ? "bg-neutral-900 text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm"} transition`}
                     >
                         <CardHeader className="p-4">
                             <div className="flex items-center">
@@ -108,47 +129,58 @@ export function ProjectList() {
 
                 {Array.isArray(projects) &&
                     projects.map((project) => (
-                        <ContextMenu key={project.id}>
-                            <ContextMenuTrigger className="flex flex-col space-y-2">
-                                <Link href={`/gantt/${project.id}`} className="block">
-                                    <Card
-                                        className={`cursor-pointer ${currentProjectId() === project.id ? "bg-neutral-900 text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm"} transition`}
-                                    >
-                                        <CardHeader className="p-4">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center">
-                                                    <div
-                                                        className="w-3 h-3 rounded-full mr-3"
-                                                        style={{ backgroundColor: project.color }}
-                                                    />
-                                                    <CardTitle className="text-base">{project.name}</CardTitle>
-                                                </div>
-                                                {(project.tasks?.length ?? 0) > 0 && (
-                                                    <div className={`text-xs px-2 py-1 rounded-md shadow-xs ${currentProjectId() === project.id ? "bg-neutral-700 text-neutral-300 " : "bg-neutral-50 text-neutral-400 shadow-neutral-400/40"}`}>
-                                                        {project.tasks?.length || 0} tasks
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {project.description && (
-                                                <CardDescription className="truncate text-xs mt-1">
-                                                    {project.description}
-                                                </CardDescription>
+                        <Link key={project.id} href={`/gantt/${project.id}`} className="block">
+                            <Card
+                                className={`p-4 cursor-pointer ${currentProjectId() === project.id ? "bg-neutral-900 text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm"} transition`}
+                                onMouseEnter={() => setHoveredProjectId(project.id)}
+                                onMouseLeave={() => setHoveredProjectId(null)}
+                            >
+                                <CardHeader className="p-0">
+                                    <div className="flex items-center justify-between h-6">
+                                        <div className="flex items-center">
+                                            <div
+                                                className="w-3 h-3 rounded-full mr-3"
+                                                style={{ backgroundColor: project.color }}
+                                            />
+                                            <CardTitle className="text-base">{project.name}</CardTitle>
+                                        </div>
+                                        <div className="flex space-x-1">
+                                            {hoveredProjectId === project.id && (
+                                                <>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            handleEdit(project);
+                                                        }}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-7 w-7 text-red-500 hover:text-red-600"
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            handleDeleteClick(project.id);
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </>
                                             )}
-                                        </CardHeader>
-                                    </Card>
-                                </Link>
-                            </ContextMenuTrigger>
-                            <ContextMenuContent className="bg-white shadow-lg border border-neutral-200 w-38">
-                                <ContextMenuLabel className="text-xs uppercase font-medium text-black">Project Actions</ContextMenuLabel>
-                                <ContextMenuSeparator className="border-neutral-100 border-b my-2" />
-                                <ContextMenuItem onClick={() => handleEdit(project)}>
-                                    Edit
-                                </ContextMenuItem>
-                                <ContextMenuItem onClick={() => handleDeleteProject(project.id)}>
-                                    Delete
-                                </ContextMenuItem>
-                            </ContextMenuContent>
-                        </ContextMenu>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                {project.description && (
+                                    <CardDescription className="text-xs p-0 mt-2">
+                                        <div>{project.description}</div>
+                                    </CardDescription>
+                                )}
+                            </Card>
+                        </Link>
                     ))}
             </div>
 
@@ -158,6 +190,23 @@ export function ProjectList() {
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}
             />
+
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                        <AlertDialogDescription className="leading-6">
+                            Are you sure you want to delete this project? This action cannot be undone and will remove all associated tasks.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleConfirmDelete} className="bg-red-500 hover:bg-red-600">
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
