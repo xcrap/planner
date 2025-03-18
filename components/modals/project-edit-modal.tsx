@@ -21,6 +21,18 @@ export function ProjectEditModal({ project, isOpen, onClose }: ProjectEditModalP
         color: '#3b82f6', // Default blue color
     });
 
+    // Preset colors for quick selection
+    const presetColors = [
+        "#3b82f6", // Blue
+        "#8b5cf6", // Purple
+        "#ec4899", // Pink
+        "#ef4444", // Red
+        "#f97316", // Orange
+        "#22c55e", // Green
+        "#14b8a6", // Teal
+        "#6b7280", // Gray
+    ];
+
     useEffect(() => {
         if (project) {
             setFormData({
@@ -107,14 +119,27 @@ export function ProjectEditModal({ project, isOpen, onClose }: ProjectEditModalP
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="color">Color</Label>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-4">
                             <Input
                                 type="color"
                                 id="color"
                                 value={formData.color}
                                 onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                                className="w-16 h-8 p-1"
+                                className="w-12 h-8 p-1 shrink-0"
                             />
+                            <div className="flex gap-2">
+                                {presetColors.map((color) => (
+                                    <button
+                                        key={color}
+                                        type="button"
+                                        className="size-7 rounded-full border border-gray-300 hover:scale-110 transition-transform shrink-0"
+                                        style={{ backgroundColor: color }}
+                                        onClick={() => setFormData(prev => ({ ...prev, color }))}
+                                        title={color}
+                                        aria-label={`Select color ${color}`}
+                                    />
+                                ))}
+                            </div>
                             <Input
                                 value={formData.color}
                                 onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
