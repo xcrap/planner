@@ -1,5 +1,4 @@
 export type Task = {
-    _projectSortKey: number;
     id: number;
     name: string;
     description: string | null;

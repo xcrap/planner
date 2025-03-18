@@ -21,6 +21,7 @@ export function TaskEditModal() {
     const setSelectedTask = useAppStore(state => state.setSelectedTask);
     const updateTask = useAppStore(state => state.updateTask);
     const deleteTask = useAppStore(state => state.deleteTask);
+    const addTask = useAppStore(state => state.addTask);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -90,17 +91,32 @@ export function TaskEditModal() {
         }
 
         // Add UTC time to indicate these are UTC dates
-        const updatedTask = {
-            ...selectedTask,
+        const taskWithDates = {
             ...formData,
             startDate: `${formData.startDate}T00:00:00.000Z`,
             endDate: `${formData.endDate}T00:00:00.000Z`,
+            order: 0
         };
 
-        updateTask(updatedTask)
-            .catch(error => {
-                console.error("Failed to update task:", error);
-            });
+        if (isNewTask) {
+            // Use addTask for new tasks
+            addTask(taskWithDates)
+                .then(() => {
+                    setSelectedTask(null); // Close modal after adding
+                })
+                .catch(error => {
+                    console.error("Failed to create task:", error);
+                });
+        } else {
+            // Use updateTask for existing tasks
+            updateTask({
+                ...selectedTask,
+                ...taskWithDates,
+            })
+                .catch(error => {
+                    console.error("Failed to update task:", error);
+                });
+        }
     };
 
     return (
@@ -241,24 +257,25 @@ export function TaskEditModal() {
                         <Label htmlFor="completed">Mark as completed</Label>
                     </div>
                     <div className="flex justify-end gap-2">
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            onClick={() => {
-                                deleteTask(selectedTask.id)
-                                    .then(() => {
-                                        // Task will be deleted from store by the handleTaskDelete function
-                                        // window.dispatchEvent(new Event('refresh-gantt'));
-                                    })
-                                    .catch(error => {
-                                        console.error("Failed to delete task:", error);
-                                    });
-                            }}
-                        >
-                            Delete
-                        </Button>
+                        {!isNewTask && (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                onClick={() => {
+                                    deleteTask(selectedTask.id)
+                                        .then(() => {
+                                            setSelectedTask(null); // Close modal after deletion
+                                        })
+                                        .catch(error => {
+                                            console.error("Failed to delete task:", error);
+                                        });
+                                }}
+                            >
+                                Delete
+                            </Button>
+                        )}
                         <Button type="submit">
-                            Save Changes
+                            {isNewTask ? 'Create Task' : 'Save Changes'}
                         </Button>
                     </div>
                 </form>
