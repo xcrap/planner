@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import {
     Card,
@@ -23,7 +23,7 @@ import { ProjectEditModal } from "@/components/modals/project-edit-modal";
 
 export function ProjectList() {
     const router = useRouter();
-    const pathname = usePathname();
+    const params = useParams();
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
@@ -32,12 +32,11 @@ export function ProjectList() {
     const isLoading = useAppStore(state => state.isLoading);
     const error = useAppStore(state => state.error);
 
-    // Get the current projectId from the pathname
-    const getCurrentProjectId = (): number | null => {
-        const match = pathname.match(/\/gantt\/(\d+)/);
-        return match ? Number.parseInt(match[1]) : null;
+    // Get the current projectId from the pathname    
+    const currentProjectId = (): number | null => {
+        const projectId = params.projectId;
+        return projectId ? Number(projectId) : null;
     };
-    const currentProjectId = getCurrentProjectId();
 
     const handleAddNew = () => {
         setSelectedProject(null);
@@ -60,7 +59,7 @@ export function ProjectList() {
         const { deleteProject } = useAppStore.getState();
         const success = await deleteProject(projectId);
 
-        if (success && currentProjectId === projectId) {
+        if (success && currentProjectId() === projectId) {
             // Navigate to home if we're on the deleted project's page
             router.push('/');
         }
@@ -113,7 +112,7 @@ export function ProjectList() {
                             <ContextMenuTrigger className="flex flex-col space-y-2">
                                 <Link href={`/gantt/${project.id}`} className="block">
                                     <Card
-                                        className={`cursor-pointer ${currentProjectId === project.id ? "bg-neutral-900 text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm"} transition`}
+                                        className={`cursor-pointer ${currentProjectId() === project.id ? "bg-neutral-900 text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm"} transition`}
                                     >
                                         <CardHeader className="p-4">
                                             <div className="flex items-center justify-between">
@@ -125,7 +124,7 @@ export function ProjectList() {
                                                     <CardTitle className="text-base">{project.name}</CardTitle>
                                                 </div>
                                                 {(project.tasks?.length ?? 0) > 0 && (
-                                                    <div className={`text-xs px-2 py-1 rounded-md shadow-xs ${currentProjectId === project.id ? "bg-neutral-700 text-neutral-300 " : "bg-neutral-50 text-neutral-400 shadow-neutral-400/40"}`}>
+                                                    <div className={`text-xs px-2 py-1 rounded-md shadow-xs ${currentProjectId() === project.id ? "bg-neutral-700 text-neutral-300 " : "bg-neutral-50 text-neutral-400 shadow-neutral-400/40"}`}>
                                                         {project.tasks?.length || 0} tasks
                                                     </div>
                                                 )}
