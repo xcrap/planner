@@ -24,12 +24,11 @@ export function ProjectEditModal({ project, isOpen, onClose }: ProjectEditModalP
     // Preset colors for quick selection
     const presetColors = [
         "#3b82f6", // Blue
-        "#8b5cf6", // Purple
-        "#ec4899", // Pink
-        "#ef4444", // Red
-        "#f97316", // Orange
-        "#22c55e", // Green
-        "#14b8a6", // Teal
+        "#21A6B9", // Teal
+        "#4D3557", // Purple
+        "#E55556", // Red
+        "#FF9418", // Orange
+        "#B0C900", // Green
         "#6b7280", // Gray
     ];
 
