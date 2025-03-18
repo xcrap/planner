@@ -301,9 +301,15 @@ export function GanttChart({
     // Check if a date is today in UTC
     const isDateToday = (date: Date) => {
         const today = new Date();
-        return date.getUTCFullYear() === today.getFullYear() &&
-            date.getUTCMonth() === today.getMonth() &&
-            date.getUTCDate() === today.getUTCDate();
+        const todayUTC = new Date(Date.UTC(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate()
+        ));
+
+        return date.getUTCFullYear() === todayUTC.getUTCFullYear() &&
+            date.getUTCMonth() === todayUTC.getUTCMonth() &&
+            date.getUTCDate() === todayUTC.getUTCDate();
     };
 
     // Get the project color for a task based on its projectId

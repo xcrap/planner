@@ -26,9 +26,15 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
     // Check if a date is today (comparing in UTC)
     const isDateToday = (date: Date) => {
         const today = new Date();
-        return date.getUTCFullYear() === today.getUTCFullYear() &&
-            date.getUTCMonth() === today.getUTCMonth() &&
-            date.getUTCDate() === today.getUTCDate();
+        const todayUTC = new Date(Date.UTC(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate()
+        ));
+
+        return date.getUTCFullYear() === todayUTC.getUTCFullYear() &&
+            date.getUTCMonth() === todayUTC.getUTCMonth() &&
+            date.getUTCDate() === todayUTC.getUTCDate();
     };
 
     return (
