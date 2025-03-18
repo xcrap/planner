@@ -54,13 +54,13 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
                             <div
                                 key={date.getTime()}
                                 className={`flex flex-col items-center justify-center rounded-t-md border-b border-neutral-100 
-                                    ${bgColorClass} ${isCurrentDay ? 'border-yellow-200' : ''}`}
+                                    ${bgColorClass} `}
                                 style={{ width: `${dayWidth}px`, height: '60px' }}
                             >
-                                <div className={`text-xs  ${isCurrentDay ? 'text-yellow-700' : ''}`}>
+                                <div className={`text-xs  ${isCurrentDay ? 'text-yellow-700' : 'text-neutral-600'}`}>
                                     {getUTCDayOfWeek(date)}
                                 </div>
-                                <div className={`text-xs font-bold mt-0.5  ${isCurrentDay ? 'text-yellow-700' : ''}`}>
+                                <div className={`text-xs font-bold mt-0.5  ${isCurrentDay ? 'text-yellow-700' : 'text-neutral-700'}`}>
                                     {formatUTCDate(date, 'month')} {formatUTCDate(date, 'day')}
                                 </div>
                             </div>

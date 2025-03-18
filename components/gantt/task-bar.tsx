@@ -21,7 +21,6 @@ type TaskBarProps = {
     onResizeEnd: () => void;
     onTaskClick: (task: Task) => void;
     onReorder: (taskId: number, newOrder: number) => void;
-    isAllProjectsView?: boolean; // We'll keep this prop for compatibility but change how we use it
 };
 
 export function TaskBar({
@@ -39,8 +38,7 @@ export function TaskBar({
     onResizeStart,
     onResize,
     onResizeEnd,
-    onTaskClick,
-    isAllProjectsView = false
+    onTaskClick
 }: TaskBarProps) {
     const [dragStartX, setDragStartX] = useState<number>(0);
     const [initialX, setInitialX] = useState<number>(0);
@@ -168,25 +166,11 @@ export function TaskBar({
     const showResizeHandles = isHovering || isResizing;
 
     return (
-        <div className="relative flex items-center h-16 mb-1 group border-b border-gray-200 last:border-b-0">
+        <div className="relative flex items-center h-16 group border-b border-gray-200">
             <div className="px-4 w-60 font-medium text-sm text-neutral-800">
-                {/* Show project name when in all projects view or when projectName is available */}
-                {isAllProjectsView || 'projectName' in task ? (
-                    <div className="flex flex-col space-y-1">
-                        <span className="truncate">{task.name}</span>
-                        <span className="text-xs text-neutral-500 flex items-center">
-                            <span
-                                className="inline-block w-2 h-2 rounded-full mr-1"
-                                style={{ backgroundColor: projectColor }}
-                            />
-                            {(task).projectName || `Project #${task.projectId}`}
-                        </span>
-                    </div>
-                ) : (
-                    <div className="line-clamp-2">
-                        <span>{task.name}</span>
-                    </div>
-                )}
+                <div className="line-clamp-2">
+                    <span>{task.name}</span>
+                </div>
             </div>
 
             <div

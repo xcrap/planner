@@ -8,6 +8,7 @@ import { Timeline } from '@/components/gantt/timeline';
 import { ZoomIn, ZoomOut } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import type { Task, Project } from '@/types/task';
+import { ProjectHeader } from '@/components/gantt/project-header';
 
 // Move the function outside the component so it's not recreated on each render
 const normalizeToUTCDate = (date: string) => {
@@ -415,7 +416,7 @@ export function GanttChart({
                         {timeRange.map((date, i) => {
                             const isCurrentDay = isDateToday(date);
                             // Today's styling takes precedence over weekend styling
-                            const bgColorClass = isCurrentDay ? 'bg-yellow-50' : (isWeekend(date) ? 'bg-neutral-50' : '');
+                            const bgColorClass = isCurrentDay ? 'bg-yellow-50' : (isWeekend(date) ? 'bg-neutral-50' : 'bg-white');
 
                             return (
                                 <div
@@ -448,61 +449,98 @@ export function GanttChart({
                                 );
                             }
 
-                            return tasks.map((task, index) => {
-                                // Extract dates directly from the string format
-                                const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
-                                const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
+                            // For both views, group tasks by project
+                            const tasksByProject: Record<number, Task[]> = {};
 
-                                // Create UTC dates using the exact year, month, and day
-                                const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
-                                const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
+                            // If single project view, we'll only have one group
+                            if (projectId) {
+                                tasksByProject[projectId] = tasks;
+                            } else {
+                                // Group tasks by project ID for all projects view
+                                for (const task of tasks) {
+                                    if (!tasksByProject[task.projectId]) {
+                                        tasksByProject[task.projectId] = [];
+                                    }
+                                    tasksByProject[task.projectId].push(task);
+                                }
+                            }
 
-                                // Get the first date in the time range
-                                const timeRangeStartParts = timeRange[0].toISOString().split('T')[0].split('-').map(Number);
-                                const timeRangeStartUTC = new Date(Date.UTC(timeRangeStartParts[0], timeRangeStartParts[1] - 1, timeRangeStartParts[2]));
+                            // Render project headers followed by their tasks
+                            return Object.entries(tasksByProject).flatMap(([projectIdStr, projectTasks]) => {
+                                const projectIdNum = Number(projectIdStr);
+                                const project = projects.find(p => p.id === projectIdNum);
+                                const projectColor = project?.color || '#3498db';
 
-                                // Calculate days between UTC dates
-                                const startOffset = differenceInDays(startDate, timeRangeStartUTC);
-                                // Calculate duration using UTC dates
-                                const duration = differenceInDays(endDate, startDate) + 1;
+                                const components = [];
 
-                                // Apply preview offsets for the active task
-                                const previewDragOffset = (draggingTaskId === task.id) ? dragPreviewOffset : 0;
-                                const previewResizeStartOffset = (resizingTaskId === task.id && resizeEdge === 'start') ? resizePreviewOffset : 0;
-                                const previewResizeEndOffset = (resizingTaskId === task.id && resizeEdge === 'end') ? resizePreviewOffset : 0;
-
-                                // Get the color based on project
-                                const taskColor = getProjectColorForTask(task);
-
-                                return (
-                                    <TaskBar
-                                        key={task.id}
-                                        task={task}
-                                        index={index}
-                                        startOffset={startOffset + previewDragOffset + previewResizeStartOffset}
-                                        duration={duration - previewResizeStartOffset + previewResizeEndOffset}
-                                        dayWidth={dayWidth}
-                                        isDragging={draggingTaskId === task.id}
-                                        isResizing={resizingTaskId === task.id}
-                                        resizeEdge={resizeEdge}
-                                        timeRange={timeRange}
-                                        onDragStart={handleTaskDragStart}
-                                        onDrag={handleTaskDrag}
-                                        onDragEnd={handleTaskDragEnd}
-                                        onResizeStart={handleTaskResizeStart}
-                                        onResize={handleTaskResize}
-                                        onResizeEnd={handleTaskResizeEnd}
-                                        onTaskClick={handleTaskClick}
-                                        projectColor={taskColor}
-                                        onReorder={(taskId: number, newOrder: number) => {
-                                            updateTask({
-                                                id: taskId,
-                                                order: newOrder
-                                            });
-                                        }}
-                                        isAllProjectsView={!projectId} // Show project info when no specific project is selected
+                                // Add project header
+                                components.push(
+                                    <ProjectHeader
+                                        key={`project-header-${projectIdNum}`}
+                                        projectId={projectIdNum}
+                                        projectName={project?.name || ''}
+                                        projectColor={projectColor}
                                     />
                                 );
+
+                                // Add tasks for this project
+                                projectTasks.forEach((task, index) => {
+                                    // Extract dates directly from the string format
+                                    const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
+                                    const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
+
+                                    // Create UTC dates using the exact year, month, and day
+                                    const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
+                                    const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
+
+                                    // Get the first date in the time range
+                                    const timeRangeStartParts = timeRange[0].toISOString().split('T')[0].split('-').map(Number);
+                                    const timeRangeStartUTC = new Date(Date.UTC(timeRangeStartParts[0], timeRangeStartParts[1] - 1, timeRangeStartParts[2]));
+
+                                    // Calculate days between UTC dates
+                                    const startOffset = differenceInDays(startDate, timeRangeStartUTC);
+                                    // Calculate duration using UTC dates
+                                    const duration = differenceInDays(endDate, startDate) + 1;
+
+                                    // Apply preview offsets for the active task
+                                    const previewDragOffset = (draggingTaskId === task.id) ? dragPreviewOffset : 0;
+                                    const previewResizeStartOffset = (resizingTaskId === task.id && resizeEdge === 'start') ? resizePreviewOffset : 0;
+                                    const previewResizeEndOffset = (resizingTaskId === task.id && resizeEdge === 'end') ? resizePreviewOffset : 0;
+
+                                    // Get the color based on project
+                                    const taskColor = projectColor;
+
+                                    components.push(
+                                        <TaskBar
+                                            key={task.id}
+                                            task={task}
+                                            index={index}
+                                            startOffset={startOffset + previewDragOffset + previewResizeStartOffset}
+                                            duration={duration - previewResizeStartOffset + previewResizeEndOffset}
+                                            dayWidth={dayWidth}
+                                            isDragging={draggingTaskId === task.id}
+                                            isResizing={resizingTaskId === task.id}
+                                            resizeEdge={resizeEdge}
+                                            timeRange={timeRange}
+                                            onDragStart={handleTaskDragStart}
+                                            onDrag={handleTaskDrag}
+                                            onDragEnd={handleTaskDragEnd}
+                                            onResizeStart={handleTaskResizeStart}
+                                            onResize={handleTaskResize}
+                                            onResizeEnd={handleTaskResizeEnd}
+                                            onTaskClick={handleTaskClick}
+                                            projectColor={taskColor}
+                                            onReorder={(taskId: number, newOrder: number) => {
+                                                updateTask({
+                                                    id: taskId,
+                                                    order: newOrder
+                                                });
+                                            }}
+                                        />
+                                    );
+                                });
+
+                                return components;
                             });
                         })()}
                     </div>
