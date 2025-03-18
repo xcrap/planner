@@ -44,23 +44,23 @@ export function Timeline({ timeRange, dayWidth }: TimelineProps) {
                 <div className="w-60 shrink-0" />
 
                 {/* Days */}
-                <div className="flex">
+                <div className="flex border-b border-neutral-200">
                     {timeRange.map((date) => {
                         const isCurrentDay = isDateToday(date);
                         // Today's styling takes precedence over weekend styling
-                        const bgColorClass = isCurrentDay ? 'bg-yellow-50' : (isWeekend(date) ? 'bg-neutral-100' : '');
+                        const bgColorClass = isCurrentDay ? 'bg-yellow-50' : (isWeekend(date) ? 'bg-neutral-100' : 'bg-white');
 
                         return (
                             <div
                                 key={date.getTime()}
-                                className={`flex flex-col items-center justify-center rounded-t-md border-b border-neutral-100 
+                                className={`flex flex-col items-center justify-center rounded-t-md 
                                     ${bgColorClass} `}
                                 style={{ width: `${dayWidth}px`, height: '60px' }}
                             >
                                 <div className={`text-xs  ${isCurrentDay ? 'text-yellow-700' : 'text-neutral-600'}`}>
                                     {getUTCDayOfWeek(date)}
                                 </div>
-                                <div className={`text-xs font-bold mt-0.5  ${isCurrentDay ? 'text-yellow-700' : 'text-neutral-700'}`}>
+                                <div className={`text-xs font-bold mt-0.5  ${isCurrentDay ? 'text-yellow-700' : 'text-neutral-800'}`}>
                                     {formatUTCDate(date, 'month')} {formatUTCDate(date, 'day')}
                                 </div>
                             </div>
