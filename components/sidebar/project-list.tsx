@@ -150,7 +150,7 @@ export function ProjectList() {
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-7 w-7"
+                                                        className="h-7 w-7 text-neutral-500 hover:text-neutral-600"
                                                         onClick={(e) => {
                                                             e.preventDefault();
                                                             handleEdit(project);
