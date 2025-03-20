@@ -159,7 +159,7 @@ export function TaskBar({
         backgroundColor: task.completed ? '#a3e635' : projectColor,
         opacity: isDragging || isResizing ? 0.7 : 1,
         cursor: isDragging ? 'grabbing' : 'grab',
-        transition: isDragging || isResizing ? 'none' : 'box-shadow 0.2s ease',
+        // No transitions at all
     });
 
     // Determine if resize handles should be visible

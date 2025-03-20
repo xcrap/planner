@@ -195,12 +195,12 @@ export function GanttChart({
                 const startDateFormatted = newStartDate.toISOString().split('T')[0];
                 const endDateFormatted = newEndDate.toISOString().split('T')[0];
 
-                // Use store action to update task
+                // Use store action to update task with silentUpdate=true to prevent re-rendering
                 await updateTask({
                     id: draggingTaskId,
                     startDate: `${startDateFormatted}T00:00:00.000Z`,
                     endDate: `${endDateFormatted}T00:00:00.000Z`,
-                });
+                }, true); // Pass true for silentUpdate
             }
         }
 
@@ -253,12 +253,12 @@ export function GanttChart({
                 const startDateFormatted = newStartDate.toISOString().split('T')[0];
                 const endDateFormatted = newEndDate.toISOString().split('T')[0];
 
-                // Use store action to update task
+                // Use store action to update task with silentUpdate=true to prevent re-rendering
                 await updateTask({
                     id: resizingTaskId,
                     startDate: `${startDateFormatted}T00:00:00.000Z`,
                     endDate: `${endDateFormatted}T00:00:00.000Z`,
-                });
+                }, true); // Pass true for silentUpdate
             }
         }
 

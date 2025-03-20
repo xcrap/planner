@@ -27,7 +27,7 @@ type AppState = {
     // Actions - Task Operations
     setTask: (task: Task) => void;
     addTask: (task: Omit<Task, 'id'>) => Promise<Task | null>;
-    updateTask: (task: Partial<Task> & { id: number }) => Promise<Task | null>;
+    updateTask: (task: Partial<Task> & { id: number }, silentUpdate?: boolean) => Promise<Task | null>;
     deleteTask: (taskId: number) => Promise<boolean>;
     setSelectedTask: (task: Task | null) => void;
     
@@ -325,7 +325,7 @@ export const useAppStore = create<AppState>()(
                 }
             },
             
-            updateTask: async (task) => {
+            updateTask: async (task, silentUpdate = false) => {
                 if (!task.id) return null;
                 
                 try {
@@ -336,9 +336,22 @@ export const useAppStore = create<AppState>()(
                     // Merge the changes with the full task
                     const updatedTask = { ...fullTask, ...task };
                     
-                    // Optimistic update
+                    // Optimistic update - always perform this
                     get().setTask(updatedTask as Task);
                     
+                    // For silent updates used in drag/resize, return early after optimistic update
+                    if (silentUpdate) {
+                        // Still send the request to the server, but don't wait for response to update UI
+                        fetch(`/api/tasks/${task.id}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(updatedTask),
+                        }).catch(err => console.error("Background task update failed:", err));
+                        
+                        return updatedTask as Task;
+                    }
+                    
+                    // For normal updates, continue with standard flow
                     const response = await fetch(`/api/tasks/${task.id}`, {
                         method: "PUT",
                         headers: { "Content-Type": "application/json" },
