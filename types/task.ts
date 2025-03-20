@@ -16,5 +16,6 @@ export type Project = {
     name: string;
     description: string | null;
     color: string;
+    order: number;
     tasks: Task[];
 };

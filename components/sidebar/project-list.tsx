@@ -8,7 +8,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Layers, Edit, Trash2 } from "lucide-react";
+import { Plus, Layers, Edit, Trash2, GripVertical } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import {
     ContextMenu,
@@ -30,6 +30,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 
 export function ProjectList() {
     const router = useRouter();
@@ -44,6 +45,7 @@ export function ProjectList() {
     const projects = useAppStore(state => state.projects);
     const isLoading = useAppStore(state => state.isLoading);
     const error = useAppStore(state => state.error);
+    const reorderProjects = useAppStore(state => state.reorderProjects);
 
     // Get the current projectId from the pathname    
     const currentProjectId = (): number | null => {
@@ -86,6 +88,23 @@ export function ProjectList() {
         setProjectToDelete(null);
     };
 
+    // Handle drag end for reordering projects
+    const handleDragEnd = async (result: DropResult) => {
+        const { source, destination } = result;
+
+        // Return if dropped outside the list or at the same position
+        if (!destination || source.index === destination.index) {
+            return;
+        }
+
+        const currentProjects = [...projects];
+        const [reorderedProject] = currentProjects.splice(source.index, 1);
+        currentProjects.splice(destination.index, 0, reorderedProject);
+
+        // Get project IDs in the new order and update via store
+        await reorderProjects(currentProjects.map(p => p.id));
+    };
+
     return (
         <div className="h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
@@ -99,7 +118,7 @@ export function ProjectList() {
                 </Button>
             </div>
 
-            <div className="space-y-2 overflow-auto mb-10">
+            <div className="space-y-2 mb-10">
                 {/* All Projects option */}
                 <Link href="/" className="block">
                     <Card
@@ -127,61 +146,101 @@ export function ProjectList() {
                     </p>
                 )}
 
-                {Array.isArray(projects) &&
-                    projects.map((project) => (
-                        <Link key={project.id} href={`/gantt/${project.id}`} className="block">
-                            <Card
-                                className={`p-4 cursor-pointer ${currentProjectId() === project.id ? "bg-neutral-900 text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm"} transition`}
-                                onMouseEnter={() => setHoveredProjectId(project.id)}
-                                onMouseLeave={() => setHoveredProjectId(null)}
+                {/* Draggable Projects List */}
+                <DragDropContext onDragEnd={handleDragEnd}>
+                    <Droppable droppableId="project-list" ignoreContainerClipping={true}>
+                        {(provided) => (
+                            <div
+                                {...provided.droppableProps}
+                                ref={provided.innerRef}
+                                className="space-y-2"
                             >
-                                <CardHeader className="p-0">
-                                    <div className="flex items-center justify-between h-6">
-                                        <div className="flex items-center">
-                                            <div
-                                                className="w-3 h-3 rounded-full mr-3"
-                                                style={{ backgroundColor: project.color }}
-                                            />
-                                            <CardTitle className="text-base">{project.name}</CardTitle>
-                                        </div>
-                                        <div className="flex space-x-1">
-                                            {hoveredProjectId === project.id && (
-                                                <>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 text-neutral-500 hover:text-neutral-600"
+                                {Array.isArray(projects) &&
+                                    projects.map((project, index) => (
+                                        <Draggable
+                                            key={project.id}
+                                            draggableId={`project-${project.id}`}
+                                            index={index}
+                                        >
+                                            {(provided, snapshot) => (
+                                                <div
+                                                    ref={provided.innerRef}
+                                                    {...provided.draggableProps}
+                                                    className={`${snapshot.isDragging ? "opacity-70" : ""}`}
+                                                    style={{
+                                                        ...provided.draggableProps.style,
+                                                        transition: snapshot.isDragging ? undefined : 'all 0.2s'
+                                                    }}
+                                                >
+                                                    <Card
+                                                        className={`p-4 cursor-pointer ${currentProjectId() === project.id ? "bg-neutral-900 text-white shadow-none" : "bg-white border-neutral-200 shadow-none hover:border-neutral-300 hover:shadow-sm"} transition`}
+                                                        onMouseEnter={() => setHoveredProjectId(project.id)}
+                                                        onMouseLeave={() => setHoveredProjectId(null)}
                                                         onClick={(e) => {
-                                                            e.preventDefault();
-                                                            handleEdit(project);
+                                                            router.push(`/gantt/${project.id}`);
                                                         }}
                                                     >
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-7 w-7 text-red-500 hover:text-red-600"
-                                                        onClick={(e) => {
-                                                            e.preventDefault();
-                                                            handleDeleteClick(project.id);
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </>
+                                                        <CardHeader className="p-0">
+                                                            <div className="flex items-center justify-between h-6">
+                                                                <div className="flex items-center">
+                                                                    <div
+                                                                        className="w-3 h-3 rounded-full mr-3"
+                                                                        style={{ backgroundColor: project.color }}
+                                                                    />
+                                                                    <CardTitle className="text-base">{project.name}</CardTitle>
+                                                                </div>
+                                                                <div className="flex space-x-1">
+                                                                    {/* Drag Handle - Always rendered but only visible on hover */}
+                                                                    <div
+                                                                        {...provided.dragHandleProps}
+                                                                        className={`cursor-grab active:cursor-grabbing h-7 w-7 flex items-center justify-center ${hoveredProjectId === project.id ? 'opacity-100' : 'opacity-0'}`}
+                                                                    >
+                                                                        <GripVertical className="h-4 w-4 text-neutral-400" />
+                                                                    </div>
+                                                                    {hoveredProjectId === project.id && (
+                                                                        <>
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-7 w-7 text-neutral-500 hover:text-neutral-600"
+                                                                                onClick={(e) => {
+                                                                                    e.preventDefault();
+                                                                                    e.stopPropagation();
+                                                                                    handleEdit(project);
+                                                                                }}
+                                                                            >
+                                                                                <Edit className="h-4 w-4" />
+                                                                            </Button>
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-7 w-7 text-red-500 hover:text-red-600"
+                                                                                onClick={(e) => {
+                                                                                    e.preventDefault();
+                                                                                    e.stopPropagation();
+                                                                                    handleDeleteClick(project.id);
+                                                                                }}
+                                                                            >
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            </Button>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            {project.description && (
+                                                                <CardDescription className="text-xs p-0 mt-2">{project.description}</CardDescription>
+                                                            )}
+                                                        </CardHeader>
+                                                    </Card>
+                                                </div>
                                             )}
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                {project.description && (
-                                    <CardDescription className="text-xs p-0 mt-2">
-                                        <div>{project.description}</div>
-                                    </CardDescription>
-                                )}
-                            </Card>
-                        </Link>
-                    ))}
+                                        </Draggable>
+                                    ))}
+                                {provided.placeholder}
+                            </div>
+                        )}
+                    </Droppable>
+                </DragDropContext>
             </div>
 
             {/* Project Edit Modal */}

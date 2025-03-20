@@ -22,6 +22,7 @@ type AppState = {
     addProject: (project: Omit<Project, 'id' | 'tasks'>) => Promise<Project | null>;
     updateProject: (project: Partial<Project> & { id: number }) => Promise<Project | null>;
     deleteProject: (projectId: number) => Promise<boolean>;
+    reorderProjects: (projectIds: number[]) => Promise<boolean>;
     
     // Actions - Task Operations
     setTask: (task: Task) => void;
@@ -188,6 +189,58 @@ export const useAppStore = create<AppState>()(
                 } catch (error) {
                     console.error("Error deleting project:", error);
                     set({ error: "Error deleting project" });
+                    return false;
+                }
+            },
+            
+            reorderProjects: async (projectIds) => {
+                try {
+                    const currentProjects = get().projects;
+                    
+                    // Create a new array of projects with updated order
+                    // Assign higher values to items that should appear first (reverse the index)
+                    const projectsWithNewOrder = projectIds.map((id, index) => {
+                        return {
+                            id,
+                            order: projectIds.length - index  // Higher values for items at the beginning
+                        };
+                    });
+                    
+                    // Optimistic update
+                    const updatedProjects = [...currentProjects].sort((a, b) => {
+                        const aIndex = projectIds.indexOf(a.id);
+                        const bIndex = projectIds.indexOf(b.id);
+                        if (aIndex === -1) return 1;
+                        if (bIndex === -1) return -1;
+                        return aIndex - bIndex;
+                    });
+                    
+                    // Update the order property on each project
+                    updatedProjects.forEach((project, index) => {
+                        if (projectIds.includes(project.id)) {
+                            project.order = projectIds.length - index;  // Higher values for higher priority
+                        }
+                    });
+                    
+                    set({ projects: updatedProjects });
+                    
+                    // Send update to API
+                    const response = await fetch("/api/projects", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ projects: projectsWithNewOrder }),
+                    });
+                    
+                    if (response.ok) {
+                        return true;
+                    }
+                    
+                    // Revert on failure
+                    set({ projects: currentProjects, error: "Failed to reorder projects" });
+                    return false;
+                } catch (error) {
+                    console.error("Error reordering projects:", error);
+                    set({ error: "Error reordering projects" });
                     return false;
                 }
             },
@@ -379,7 +432,15 @@ export const useAppStore = create<AppState>()(
                         const projectsArray = Array.isArray(data) ? data :
                             (data.projects && Array.isArray(data.projects) ? data.projects : []);
                         
-                        set({ projects: projectsArray, isLoading: false });
+                        // Sort projects by order
+                        const sortedProjects = projectsArray.sort((a, b) => {
+                            if (a.order !== undefined && b.order !== undefined) {
+                                return b.order - a.order;
+                            }
+                            return a.id - b.id;
+                        });
+                        
+                        set({ projects: sortedProjects, isLoading: false });
                     } else {
                         set({ error: "Failed to fetch projects", isLoading: false });
                     }
