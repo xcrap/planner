@@ -8,7 +8,7 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Layers, Edit, Trash2, GripVertical } from "lucide-react";
+import { Plus, Layers, Edit, Trash2, GripVertical, ArrowDownUp } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import {
     ContextMenu,
@@ -40,6 +40,7 @@ export function ProjectList() {
     const [hoveredProjectId, setHoveredProjectId] = useState<number | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [projectToDelete, setProjectToDelete] = useState<number | null>(null);
+    const [sortingMode, setSortingMode] = useState(false);
 
     // Fix: Use separate selectors for each piece of state
     const projects = useAppStore(state => state.projects);
@@ -105,17 +106,31 @@ export function ProjectList() {
         await reorderProjects(currentProjects.map(p => p.id));
     };
 
+    const toggleSortingMode = () => {
+        setSortingMode(prev => !prev);
+    };
+
     return (
         <div className="h-full flex flex-col">
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">Projects</h2>
-                <Button
-                    size="sm"
-                    onClick={handleAddNew}
-                    variant="outline"
-                >
-                    <Plus className="h-4 w-4 mr-1" /> Add
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button
+                        size="sm"
+                        variant={sortingMode ? "default" : "outline"}
+                        onClick={toggleSortingMode}
+                        className={sortingMode ? "bg-neutral-800 text-white" : ""}
+                    >
+                        <ArrowDownUp className="h-4 w-4 mr-1" /> Sort
+                    </Button>
+                    <Button
+                        size="sm"
+                        onClick={handleAddNew}
+                        variant="outline"
+                    >
+                        <Plus className="h-4 w-4 mr-1" /> Add
+                    </Button>
+                </div>
             </div>
 
             <div className="space-y-2 mb-10">
@@ -183,6 +198,16 @@ export function ProjectList() {
                                                         <CardHeader className="p-0">
                                                             <div className="flex items-center justify-between h-6">
                                                                 <div className="flex items-center">
+                                                                    {/* Drag Handle - always rendered but width is 0 when not in sorting mode */}
+                                                                    <div
+                                                                        {...provided.dragHandleProps}
+                                                                        className={`cursor-grab active:cursor-grabbing flex items-center justify-center transition-all ${sortingMode
+                                                                                ? "h-7 w-7 mr-1 opacity-100"
+                                                                                : "h-7 w-0 mr-0 p-0 opacity-0 overflow-hidden"
+                                                                            }`}
+                                                                    >
+                                                                        <GripVertical className="h-4 w-4 text-neutral-400" />
+                                                                    </div>
                                                                     <div
                                                                         className="w-3 h-3 rounded-full mr-3"
                                                                         style={{ backgroundColor: project.color }}
@@ -190,13 +215,6 @@ export function ProjectList() {
                                                                     <CardTitle className="text-base">{project.name}</CardTitle>
                                                                 </div>
                                                                 <div className="flex space-x-1">
-                                                                    {/* Drag Handle - Always rendered but only visible on hover */}
-                                                                    <div
-                                                                        {...provided.dragHandleProps}
-                                                                        className={`cursor-grab active:cursor-grabbing h-7 w-7 flex items-center justify-center ${hoveredProjectId === project.id ? 'opacity-100' : 'opacity-0'}`}
-                                                                    >
-                                                                        <GripVertical className="h-4 w-4 text-neutral-400" />
-                                                                    </div>
                                                                     {hoveredProjectId === project.id && (
                                                                         <>
                                                                             <Button
