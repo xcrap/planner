@@ -182,7 +182,7 @@ export function TaskBar({
         <div
             id={`task-${task.id}`}
             data-project-id={task.projectId}
-            className="task-row relative flex items-center h-16 group border-b border-gray-200 hover:bg-neutral-50"
+            className="task-row relative flex items-center h-16 group border-b border-gray-200 "
         >
             <div className="px-4 w-60 font-medium text-sm text-neutral-800 flex items-center">
                 {/* Task drag handle - visible only in sorting mode */}
