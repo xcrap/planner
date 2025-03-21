@@ -30,6 +30,7 @@ type AppState = {
     updateTask: (task: Partial<Task> & { id: number }, silentUpdate?: boolean) => Promise<Task | null>;
     deleteTask: (taskId: number) => Promise<boolean>;
     setSelectedTask: (task: Task | null) => void;
+    reorderTasks: (projectId: number, taskIds: number[]) => Promise<boolean>;
     
     // Data fetching
     fetchProjects: () => Promise<void>;
@@ -430,6 +431,69 @@ export const useAppStore = create<AppState>()(
                     console.error("Error deleting task:", error);
                     set({ error: "Error deleting task" });
                     get().fetchProjects(); // Revert by re-fetching data
+                    return false;
+                }
+            },
+            
+            // Add reorderTasks function
+            reorderTasks: async (projectId, taskIds) => {
+                try {
+                    const currentProjects = [...get().projects];
+                    const projectIndex = currentProjects.findIndex(p => p.id === projectId);
+                    
+                    if (projectIndex === -1) return false;
+                    
+                    // Create a new array of tasks with updated order
+                    // Assign sequential order values (lower values come first)
+                    const tasksWithNewOrder = taskIds.map((id, index) => {
+                        return {
+                            id,
+                            order: index * 10  // Use intervals of 10 to allow for insertions
+                        };
+                    });
+                    
+                    // Optimistic update
+                    if (currentProjects[projectIndex].tasks) {
+                        // Sort the tasks in this project based on the new order
+                        const updatedProject = {...currentProjects[projectIndex]};
+                        const updatedTasks = [...(updatedProject.tasks || [])].sort((a, b) => {
+                            const aIndex = taskIds.indexOf(a.id);
+                            const bIndex = taskIds.indexOf(b.id);
+                            
+                            if (aIndex === -1) return 1;
+                            if (bIndex === -1) return -1;
+                            return aIndex - bIndex;
+                        });
+                        
+                        // Update the order property on each task
+                        updatedTasks.forEach((task, index) => {
+                            if (taskIds.includes(task.id)) {
+                                task.order = index * 10;  // Use intervals of 10
+                            }
+                        });
+                        
+                        updatedProject.tasks = updatedTasks;
+                        currentProjects[projectIndex] = updatedProject;
+                        set({ projects: currentProjects });
+                    }
+                    
+                    // Send update to API using the existing tasks endpoint
+                    const response = await fetch("/api/tasks", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ tasks: tasksWithNewOrder }),
+                    });
+                    
+                    if (response.ok) {
+                        return true;
+                    }
+                    
+                    // On failure, revert to original state
+                    get().fetchProjectDetails(projectId);
+                    return false;
+                } catch (error) {
+                    console.error("Error reordering tasks:", error);
+                    set({ error: "Error reordering tasks" });
                     return false;
                 }
             },

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Task } from '@/types/task';
-import { Check } from 'lucide-react';
+import { Check, GripVertical } from 'lucide-react';
+import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
 
 type TaskBarProps = {
     task: Task;
@@ -20,11 +21,13 @@ type TaskBarProps = {
     onResize: (taskId: number, daysOffset: number) => void;
     onResizeEnd: () => void;
     onTaskClick: (task: Task) => void;
-    onReorder: (taskId: number, newOrder: number) => void;
+    sortingMode: boolean;
+    dragHandleProps?: DraggableProvidedDragHandleProps;
 };
 
 export function TaskBar({
     task,
+    index,
     startOffset,
     duration,
     dayWidth,
@@ -38,7 +41,9 @@ export function TaskBar({
     onResizeStart,
     onResize,
     onResizeEnd,
-    onTaskClick
+    onTaskClick,
+    sortingMode,
+    dragHandleProps
 }: TaskBarProps) {
     const [dragStartX, setDragStartX] = useState<number>(0);
     const [initialX, setInitialX] = useState<number>(0);
@@ -68,6 +73,9 @@ export function TaskBar({
 
     // Handle dragging the task
     const handleDragStart = (e: React.MouseEvent) => {
+        // Skip if in sorting mode
+        if (sortingMode) return;
+
         e.preventDefault();
         e.stopPropagation();
         const rect = barRef.current?.getBoundingClientRect();
@@ -79,6 +87,9 @@ export function TaskBar({
 
     // Handle resizing from either edge
     const handleResizeStart = (e: React.MouseEvent, side: 'start' | 'end') => {
+        // Skip if in sorting mode
+        if (sortingMode) return;
+
         e.preventDefault();
         e.stopPropagation();
         setDragStartX(e.clientX);
@@ -88,6 +99,9 @@ export function TaskBar({
 
     // Handle clicking to edit
     const handleClick = (e: React.MouseEvent) => {
+        // Skip if in sorting mode
+        if (sortingMode) return;
+
         e.preventDefault();
         e.stopPropagation();
         if (!hasMovement) {
@@ -158,16 +172,30 @@ export function TaskBar({
         width: `${width}px`,
         backgroundColor: task.completed ? '#a3e635' : projectColor,
         opacity: isDragging || isResizing ? 0.7 : 1,
-        cursor: isDragging ? 'grabbing' : 'grab',
-        // No transitions at all
+        cursor: isDragging ? 'grabbing' : (sortingMode ? 'move' : 'grab'),
     });
 
     // Determine if resize handles should be visible
     const showResizeHandles = isHovering || isResizing;
 
     return (
-        <div className="relative flex items-center h-16 group border-b border-gray-200">
-            <div className="px-4 w-60 font-medium text-sm text-neutral-800">
+        <div
+            id={`task-${task.id}`}
+            data-project-id={task.projectId}
+            className="task-row relative flex items-center h-16 group border-b border-gray-200 hover:bg-neutral-50"
+        >
+            <div className="px-4 w-60 font-medium text-sm text-neutral-800 flex items-center">
+                {/* Task drag handle - visible only in sorting mode */}
+                <div
+                    {...dragHandleProps}
+                    className={`cursor-grab active:cursor-grabbing flex items-center justify-center transition-all mr-2
+                        ${sortingMode
+                            ? "h-6 w-6 opacity-100"
+                            : "h-6 w-0 p-0 opacity-0 overflow-hidden"
+                        }`}
+                >
+                    <GripVertical className="h-4 w-4 text-neutral-400" />
+                </div>
                 <div className="line-clamp-2">
                     <span>{task.name}</span>
                 </div>
@@ -175,8 +203,9 @@ export function TaskBar({
 
             <div
                 ref={barRef}
-                className={`relative rounded-full text-white px-4 py-1 flex items-center h-10 z-10
-                    ${isResizing ? 'ring-2 ring-black' : ''} ${task.completed ? 'shadow-lime-400/50 shadow-lg border-1 border-lime-600' : ''}`}
+                className={
+                    `relative rounded-full text-white px-4 py-1 flex items-center h-10 z-10 ${isResizing ? 'ring-2 ring-black ' : ''}${task.completed ? 'shadow-lime-400/50 shadow-lg border-1 border-lime-600' : ''}`
+                }
                 style={getTaskStyle()}
                 onMouseDown={handleDragStart}
                 onClick={handleClick}
@@ -187,12 +216,13 @@ export function TaskBar({
                 onMouseLeave={handleMouseLeave}
             >
                 {/* Resize handle - left edge */}
-                {showResizeHandles && (
+                {showResizeHandles && !sortingMode && (
                     <div
-                        className={`absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
-                            ${(isResizing && resizeEdge === 'start') || hoverEdge === 'start'
+                        className={
+                            `absolute left-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 ${(isResizing && resizeEdge === 'start') || hoverEdge === 'start'
                                 ? 'bg-black/20 w-4 -ml-1 rounded-l-full'
-                                : 'opacity-0 hover:opacity-100'}`}
+                                : 'opacity-0 hover:opacity-100'}`
+                        }
                         onMouseDown={(e) => handleResizeStart(e, 'start')}
                         onMouseEnter={() => handleResizeHover('start')}
                         onMouseLeave={() => handleResizeHover(null)}
@@ -212,25 +242,24 @@ export function TaskBar({
                 </span>
 
                 {/* Resize handle - right edge */}
-                {
-                    showResizeHandles && (
-                        <div
-                            className={`absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20
-                            ${(isResizing && resizeEdge === 'end') || hoverEdge === 'end'
-                                    ? 'bg-black/20 w-4 -mr-1 rounded-r-full'
-                                    : 'opacity-0 hover:opacity-100'}`}
-                            onMouseDown={(e) => handleResizeStart(e, 'end')}
-                            onMouseEnter={() => handleResizeHover('end')}
-                            onMouseLeave={() => handleResizeHover(null)}
-                        >
-                            {/* Visual grip for resize handle */}
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="h-4 border-l border-r border-white opacity-70 mr-[6px]" />
-                            </div>
+                {showResizeHandles && !sortingMode && (
+                    <div
+                        className={
+                            `absolute right-0 top-0 bottom-0 w-3 cursor-ew-resize z-20 ${(isResizing && resizeEdge === 'end') || hoverEdge === 'end'
+                                ? 'bg-black/20 w-4 -mr-1 rounded-r-full'
+                                : 'opacity-0 hover:opacity-100'}`
+                        }
+                        onMouseDown={(e) => handleResizeStart(e, 'end')}
+                        onMouseEnter={() => handleResizeHover('end')}
+                        onMouseLeave={() => handleResizeHover(null)}
+                    >
+                        {/* Visual grip for resize handle */}
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-4 border-l border-r border-white opacity-70 mr-[6px]" />
                         </div>
-                    )
-                }
-            </div >
-        </div >
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }

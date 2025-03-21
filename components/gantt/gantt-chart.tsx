@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button"
 import { addDays, format, differenceInDays, isWeekend } from 'date-fns';
 import { TaskBar } from '@/components/gantt/task-bar';
 import { Timeline } from '@/components/gantt/timeline';
-import { ZoomIn, ZoomOut } from 'lucide-react';
+import { ZoomIn, ZoomOut, ArrowDownUp } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import type { Task, Project } from '@/types/task';
 import { ProjectHeader } from '@/components/gantt/project-header';
+import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
 
 // Move the function outside the component so it's not recreated on each render
 const normalizeToUTCDate = (date: string) => {
@@ -33,6 +34,8 @@ export function GanttChart({
     const containerRef = useRef<HTMLDivElement>(null);
     const [dayWidth, setDayWidth] = useState(60);
     const setSelectedTask = useAppStore(state => state.setSelectedTask);
+    // Add sorting mode state
+    const [sortingMode, setSortingMode] = useState(false);
 
     // New state for tracking preview offsets
     const [dragPreviewOffset, setDragPreviewOffset] = useState<number>(0);
@@ -40,6 +43,7 @@ export function GanttChart({
 
     // Access store data with proper selectors
     const updateTask = useAppStore(state => state.updateTask);
+    const reorderTasks = useAppStore(state => state.reorderTasks);
 
     // Get the store state directly using a ref to prevent dependency cycles
     // This is a stable reference to the store functions
@@ -51,7 +55,6 @@ export function GanttChart({
 
     // This will hold our derived tasks without causing re-renders
     const tasksRef = useRef<Task[]>([]);
-
     // This state is just to trigger re-renders when tasks change
     const [taskVersion, setTaskVersion] = useState(0);
 
@@ -61,7 +64,6 @@ export function GanttChart({
             const newTasks = projectId
                 ? state.getTasksByProjectId(projectId)
                 : state.getAllTasks();
-
             // Compare tasks and update if they've changed
             if (JSON.stringify(newTasks) !== JSON.stringify(tasksRef.current)) {
                 tasksRef.current = newTasks;
@@ -107,6 +109,59 @@ export function GanttChart({
     }, [projectId]);
 
     const currentProject = currentProjectRef.current;
+
+    // Prepare data for rendering with drag and drop
+    // Group tasks by project for rendering with drag and drop
+    const tasksByProject = useMemo(() => {
+        const taskGroups: Record<number, Task[]> = {};
+
+        if (projectId) {
+            // If viewing a single project, only include tasks from that project
+            taskGroups[projectId] = tasks.filter(t => t.projectId === projectId)
+                .sort((a, b) => {
+                    if (a.order !== undefined && b.order !== undefined) {
+                        return a.order - b.order;
+                    }
+                    return a.id - b.id;
+                });
+        } else {
+            // If viewing all projects, group tasks by projectId
+            for (const task of tasks) {
+                if (!taskGroups[task.projectId]) {
+                    taskGroups[task.projectId] = [];
+                }
+                taskGroups[task.projectId].push(task);
+            }
+
+            // Sort tasks within each project
+            for (const projectIdKey of Object.keys(taskGroups)) {
+                const projectIdNum = Number.parseInt(projectIdKey);
+                taskGroups[projectIdNum].sort((a, b) => {
+                    if (a.order !== undefined && b.order !== undefined) {
+                        return a.order - b.order;
+                    }
+                    return a.id - b.id;
+                });
+            }
+        }
+
+        return taskGroups;
+    }, [tasks, projectId]);
+
+    // Sorted project IDs for rendering
+    const sortedProjectIds = useMemo(() => {
+        return projects
+            .slice()
+            .sort((a, b) => {
+                // Sort by order (higher values first)
+                if (a.order !== undefined && b.order !== undefined) {
+                    return b.order - a.order;
+                }
+                return a.id - b.id;
+            })
+            .map(p => p.id)
+            .filter(id => tasksByProject[id] && tasksByProject[id].length > 0);
+    }, [projects, tasksByProject]);
 
     // Memoize calculateTimeRange with useCallback to prevent recreation on every render
     const calculateTimeRange = useCallback((taskList: Task[]) => {
@@ -272,6 +327,19 @@ export function GanttChart({
         setSelectedTask(task);
     };
 
+    // Add this function to handle toggling sorting mode
+    const toggleSortingMode = () => {
+        setSortingMode(prev => !prev);
+    };
+
+    // Add function to handle task reordering
+    const handleReorderTask = async (taskId: number, projectId: number, newOrder: number) => {
+        await updateTask({
+            id: taskId,
+            order: newOrder
+        });
+    };
+
     const handleAddTask = () => {
         const today = new Date();
         // Create UTC dates
@@ -381,11 +449,57 @@ export function GanttChart({
     // Get title based on current view
     const chartTitle = projectId && currentProject ? currentProject.name : 'All Projects';
 
+    // Handle drop for task reordering
+    const handleDragEnd = (result: DropResult) => {
+        const { source, destination, draggableId } = result;
+
+        // Exit if dropped outside a droppable area or didn't change position
+        if (!destination ||
+            (source.droppableId === destination.droppableId &&
+                source.index === destination.index)) {
+            return;
+        }
+
+        // Extract project ID from the droppableId (format: "project-{projectId}")
+        const projectId = Number.parseInt(source.droppableId.split('-')[1]);
+
+        // Extract task IDs for the project
+        const projectTasks = tasks.filter(t => t.projectId === projectId)
+            .sort((a, b) => {
+                if (a.order !== undefined && b.order !== undefined) {
+                    return a.order - b.order;
+                }
+                return a.id - b.id;
+            });
+
+        // Create a copy of the task IDs array
+        const taskIds = projectTasks.map(t => t.id);
+
+        // Get the task ID that was dragged
+        const taskId = Number.parseInt(draggableId.split('-')[1]);
+
+        // Remove the task from its original position
+        taskIds.splice(source.index, 1);
+
+        // Insert the task at its new position
+        taskIds.splice(destination.index, 0, taskId);
+
+        // Update task orders using the reorderTasks function
+        reorderTasks(projectId, taskIds);
+    };
+
     return (
         <div className="flex flex-col h-full overflow-hidden">
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold">{chartTitle}</h2>
                 <div className="flex items-center space-x-4">
+                    <Button
+                        variant={sortingMode ? "default" : "outline"}
+                        onClick={toggleSortingMode}
+                        className={sortingMode ? "bg-neutral-800 text-white" : ""}
+                    >
+                        <ArrowDownUp className="h-4 w-4 mr-1" /> Sort
+                    </Button>
                     <Button variant="outline" onClick={handleAddTask}>
                         Add Task
                     </Button>
@@ -408,6 +522,7 @@ export function GanttChart({
                     }}
                 >
                     <Timeline timeRange={timeRange} dayWidth={dayWidth} />
+
                     {/* Special White Cover for the Gantt Chart */}
                     <div className="absolute left-0 right-0 bottom-0 top-[60px] bg-white -z-10 rounded-xl border border-neutral-200" />
 
@@ -417,7 +532,6 @@ export function GanttChart({
                             const isCurrentDay = isDateToday(date);
                             // Today's styling takes precedence over weekend styling
                             const bgColorClass = isCurrentDay ? 'bg-yellow-50' : (isWeekend(date) ? 'bg-neutral-50' : 'bg-white');
-
                             return (
                                 <div
                                     key={date.toISOString()}
@@ -437,124 +551,163 @@ export function GanttChart({
                         )}
                     </div>
 
-                    {/* Tasks container */}
+                    {/* Tasks container - with DragDropContext when in sorting mode */}
                     <div className="relative z-10">
-                        {(() => {
-                            // Show message if no tasks
-                            if (tasks.length === 0) {
-                                return (
-                                    <div className="flex items-center justify-center h-40 text-neutral-500">
-                                        <p>No tasks yet. Click "Add Task" to create one.</p>
-                                    </div>
-                                );
-                            }
+                        {tasks.length === 0 ? (
+                            <div className="flex items-center justify-center h-40 text-neutral-500">
+                                <p>No tasks yet. Click "Add Task" to create one.</p>
+                            </div>
+                        ) : (
+                            sortingMode ? (
+                                <DragDropContext onDragEnd={handleDragEnd}>
+                                    {sortedProjectIds.map(projectIdNum => {
+                                        const project = projects.find(p => p.id === projectIdNum);
+                                        const projectColor = project?.color || '#3498db';
+                                        const projectTasks = tasksByProject[projectIdNum];
 
-                            // For both views, group tasks by project
-                            const tasksByProject: Record<number, Task[]> = {};
-                            // If single project view, we'll only have one group
-                            if (projectId) {
-                                tasksByProject[projectId] = tasks;
-                            } else {
-                                // Group tasks by project ID for all projects view
-                                for (const task of tasks) {
-                                    if (!tasksByProject[task.projectId]) {
-                                        tasksByProject[task.projectId] = [];
-                                    }
-                                    tasksByProject[task.projectId].push(task);
-                                }
-                            }
+                                        if (!projectTasks || projectTasks.length === 0) return null;
 
-                            // Get sorted project IDs based on the order property
-                            const sortedProjectIds = projects
-                                .slice()
-                                .sort((a, b) => {
-                                    // Sort by order (higher values first)
-                                    if (a.order !== undefined && b.order !== undefined) {
-                                        return b.order - a.order;
-                                    }
-                                    return a.id - b.id;
-                                })
-                                .map(p => p.id);
+                                        return (
+                                            <div key={`project-${projectIdNum}`} className="mb-2">
+                                                <ProjectHeader
+                                                    key={`project-header-${projectIdNum}`}
+                                                    projectId={projectIdNum}
+                                                    projectName={project?.name || ''}
+                                                    projectColor={projectColor}
+                                                />
 
-                            // Render project headers followed by their tasks - use sortedProjectIds to maintain order
-                            return sortedProjectIds
-                                .filter(projectIdNum => tasksByProject[projectIdNum])
-                                .flatMap(projectIdNum => {
-                                    const projectTasks = tasksByProject[projectIdNum];
+                                                <Droppable
+                                                    droppableId={`project-${projectIdNum}`}
+                                                    type="TASK"
+                                                    direction="vertical"
+                                                >
+                                                    {(provided, snapshot) => (
+                                                        <div
+                                                            ref={provided.innerRef}
+                                                            {...provided.droppableProps}
+                                                            className={`transition-colors ${snapshot.isDraggingOver ? 'bg-neutral-100' : ''
+                                                                }`}
+                                                        >
+                                                            {projectTasks.map((task, index) => {
+                                                                // Calculate task bar positioning
+                                                                const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
+                                                                const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
+                                                                const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
+                                                                const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
+                                                                const timeRangeStartParts = timeRange[0].toISOString().split('T')[0].split('-').map(Number);
+                                                                const timeRangeStartUTC = new Date(Date.UTC(timeRangeStartParts[0], timeRangeStartParts[1] - 1, timeRangeStartParts[2]));
+                                                                const startOffset = differenceInDays(startDate, timeRangeStartUTC);
+                                                                const duration = differenceInDays(endDate, startDate) + 1;
+
+                                                                return (
+                                                                    <Draggable
+                                                                        key={`task-${task.id}`}
+                                                                        draggableId={`task-${task.id}`}
+                                                                        index={index}
+                                                                    >
+                                                                        {(provided, snapshot) => (
+                                                                            <div
+                                                                                ref={provided.innerRef}
+                                                                                {...provided.draggableProps}
+                                                                                className={`${snapshot.isDragging ? 'bg-neutral-100' : ''
+                                                                                    }`}
+                                                                            >
+                                                                                <TaskBar
+                                                                                    task={task}
+                                                                                    index={index}
+                                                                                    startOffset={startOffset}
+                                                                                    duration={duration}
+                                                                                    dayWidth={dayWidth}
+                                                                                    isDragging={draggingTaskId === task.id}
+                                                                                    isResizing={resizingTaskId === task.id}
+                                                                                    resizeEdge={resizeEdge}
+                                                                                    timeRange={timeRange}
+                                                                                    onDragStart={handleTaskDragStart}
+                                                                                    onDrag={handleTaskDrag}
+                                                                                    onDragEnd={handleTaskDragEnd}
+                                                                                    onResizeStart={handleTaskResizeStart}
+                                                                                    onResize={handleTaskResize}
+                                                                                    onResizeEnd={handleTaskResizeEnd}
+                                                                                    onTaskClick={handleTaskClick}
+                                                                                    projectColor={projectColor}
+                                                                                    sortingMode={sortingMode}
+                                                                                    dragHandleProps={provided.dragHandleProps}
+                                                                                />
+                                                                            </div>
+                                                                        )}
+                                                                    </Draggable>
+                                                                );
+                                                            })}
+                                                            {provided.placeholder}
+                                                        </div>
+                                                    )}
+                                                </Droppable>
+                                            </div>
+                                        );
+                                    })}
+                                </DragDropContext>
+                            ) : (
+                                // Regular non-sorting mode rendering
+                                sortedProjectIds.map(projectIdNum => {
                                     const project = projects.find(p => p.id === projectIdNum);
                                     const projectColor = project?.color || '#3498db';
-                                    const components = [];
+                                    const projectTasks = tasksByProject[projectIdNum];
 
-                                    // Add project header
-                                    components.push(
-                                        <ProjectHeader
-                                            key={`project-header-${projectIdNum}`}
-                                            projectId={projectIdNum}
-                                            projectName={project?.name || ''}
-                                            projectColor={projectColor}
-                                        />
-                                    );
+                                    if (!projectTasks || projectTasks.length === 0) return null;
 
-                                    // Add tasks for this project
-                                    projectTasks.forEach((task, index) => {
-                                        // Extract dates directly from the string format
-                                        const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
-                                        const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
-
-                                        // Create UTC dates using the exact year, month, and day
-                                        const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
-                                        const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
-
-                                        // Get the first date in the time range
-                                        const timeRangeStartParts = timeRange[0].toISOString().split('T')[0].split('-').map(Number);
-                                        const timeRangeStartUTC = new Date(Date.UTC(timeRangeStartParts[0], timeRangeStartParts[1] - 1, timeRangeStartParts[2]));
-
-                                        // Calculate days between UTC dates
-                                        const startOffset = differenceInDays(startDate, timeRangeStartUTC);
-                                        // Calculate duration using UTC dates
-                                        const duration = differenceInDays(endDate, startDate) + 1;
-
-                                        // Apply preview offsets for the active task
-                                        const previewDragOffset = (draggingTaskId === task.id) ? dragPreviewOffset : 0;
-                                        const previewResizeStartOffset = (resizingTaskId === task.id && resizeEdge === 'start') ? resizePreviewOffset : 0;
-                                        const previewResizeEndOffset = (resizingTaskId === task.id && resizeEdge === 'end') ? resizePreviewOffset : 0;
-
-                                        // Get the color based on project
-                                        const taskColor = projectColor;
-
-                                        components.push(
-                                            <TaskBar
-                                                key={task.id}
-                                                task={task}
-                                                index={index}
-                                                startOffset={startOffset + previewDragOffset + previewResizeStartOffset}
-                                                duration={duration - previewResizeStartOffset + previewResizeEndOffset}
-                                                dayWidth={dayWidth}
-                                                isDragging={draggingTaskId === task.id}
-                                                isResizing={resizingTaskId === task.id}
-                                                resizeEdge={resizeEdge}
-                                                timeRange={timeRange}
-                                                onDragStart={handleTaskDragStart}
-                                                onDrag={handleTaskDrag}
-                                                onDragEnd={handleTaskDragEnd}
-                                                onResizeStart={handleTaskResizeStart}
-                                                onResize={handleTaskResize}
-                                                onResizeEnd={handleTaskResizeEnd}
-                                                onTaskClick={handleTaskClick}
-                                                projectColor={taskColor}
-                                                onReorder={(taskId: number, newOrder: number) => {
-                                                    updateTask({
-                                                        id: taskId,
-                                                        order: newOrder
-                                                    });
-                                                }}
+                                    return (
+                                        <div key={`project-${projectIdNum}`} className="mb-2">
+                                            <ProjectHeader
+                                                projectId={projectIdNum}
+                                                projectName={project?.name || ''}
+                                                projectColor={projectColor}
                                             />
-                                        );
-                                    });
 
-                                    return components;
-                                });
-                        })()}
+                                            {projectTasks.map((task, index) => {
+                                                // Calculate task bar positioning
+                                                const startDateParts = task.startDate.split('T')[0].split('-').map(Number);
+                                                const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
+                                                const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
+                                                const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
+                                                const timeRangeStartParts = timeRange[0].toISOString().split('T')[0].split('-').map(Number);
+                                                const timeRangeStartUTC = new Date(Date.UTC(timeRangeStartParts[0], timeRangeStartParts[1] - 1, timeRangeStartParts[2]));
+                                                const startOffset = differenceInDays(startDate, timeRangeStartUTC);
+                                                const duration = differenceInDays(endDate, startDate) + 1;
+
+                                                // Apply preview offsets for the active task
+                                                const previewDragOffset = (draggingTaskId === task.id) ? dragPreviewOffset : 0;
+                                                const previewResizeStartOffset = (resizingTaskId === task.id && resizeEdge === 'start') ? resizePreviewOffset : 0;
+                                                const previewResizeEndOffset = (resizingTaskId === task.id && resizeEdge === 'end') ? resizePreviewOffset : 0;
+
+                                                return (
+                                                    <TaskBar
+                                                        key={task.id}
+                                                        task={task}
+                                                        index={index}
+                                                        startOffset={startOffset + previewDragOffset + previewResizeStartOffset}
+                                                        duration={duration - previewResizeStartOffset + previewResizeEndOffset}
+                                                        dayWidth={dayWidth}
+                                                        isDragging={draggingTaskId === task.id}
+                                                        isResizing={resizingTaskId === task.id}
+                                                        resizeEdge={resizeEdge}
+                                                        timeRange={timeRange}
+                                                        onDragStart={handleTaskDragStart}
+                                                        onDrag={handleTaskDrag}
+                                                        onDragEnd={handleTaskDragEnd}
+                                                        onResizeStart={handleTaskResizeStart}
+                                                        onResize={handleTaskResize}
+                                                        onResizeEnd={handleTaskResizeEnd}
+                                                        onTaskClick={handleTaskClick}
+                                                        projectColor={projectColor}
+                                                        sortingMode={sortingMode}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })
+                            )
+                        )}
                     </div>
                 </div>
             </div>
