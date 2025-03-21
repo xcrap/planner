@@ -116,7 +116,6 @@ export function ProjectList() {
                 <h2 className="text-xl font-bold">Projects</h2>
                 <div className="flex items-center gap-2">
                     <Button
-                        size="sm"
                         variant={sortingMode ? "default" : "outline"}
                         onClick={toggleSortingMode}
                         className={sortingMode ? "bg-neutral-800 text-white" : ""}
@@ -124,7 +123,6 @@ export function ProjectList() {
                         <ArrowDownUp className="h-4 w-4 mr-1" /> Sort
                     </Button>
                     <Button
-                        size="sm"
                         onClick={handleAddNew}
                         variant="outline"
                     >
@@ -202,8 +200,8 @@ export function ProjectList() {
                                                                     <div
                                                                         {...provided.dragHandleProps}
                                                                         className={`cursor-grab active:cursor-grabbing flex items-center justify-center transition-all ${sortingMode
-                                                                                ? "h-7 w-7 mr-1 opacity-100"
-                                                                                : "h-7 w-0 mr-0 p-0 opacity-0 overflow-hidden"
+                                                                            ? "h-7 w-7 mr-1 opacity-100"
+                                                                            : "h-7 w-0 mr-0 p-0 opacity-0 overflow-hidden"
                                                                             }`}
                                                                     >
                                                                         <GripVertical className="h-4 w-4 text-neutral-400" />

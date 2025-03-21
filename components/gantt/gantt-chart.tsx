@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { addDays, format, differenceInDays, isWeekend } from 'date-fns';
 import { TaskBar } from '@/components/gantt/task-bar';
 import { Timeline } from '@/components/gantt/timeline';
-import { ZoomIn, ZoomOut, ArrowDownUp } from 'lucide-react';
+import { Plus, ZoomIn, ZoomOut, ArrowDownUp } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import type { Task, Project } from '@/types/task';
 import { ProjectHeader } from '@/components/gantt/project-header';
@@ -501,7 +501,7 @@ export function GanttChart({
                         <ArrowDownUp className="h-4 w-4 mr-1" /> Sort
                     </Button>
                     <Button variant="outline" onClick={handleAddTask}>
-                        Add Task
+                        <Plus className="h-4 w-4 mr-1" /> Add Task
                     </Button>
                     <div className="flex items-center space-x-2">
                         <Button variant="outline" size="icon" onClick={() => setDayWidth(prev => Math.max(30, prev - 10))}>
