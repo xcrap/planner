@@ -585,8 +585,6 @@ export function GanttChart({
                                                         <div
                                                             ref={provided.innerRef}
                                                             {...provided.droppableProps}
-                                                            className={`transition-colors ${snapshot.isDraggingOver ? 'bg-neutral-100' : ''
-                                                                }`}
                                                         >
                                                             {projectTasks.map((task, index) => {
                                                                 // Calculate task bar positioning
@@ -618,19 +616,19 @@ export function GanttChart({
                                                                                     startOffset={startOffset}
                                                                                     duration={duration}
                                                                                     dayWidth={dayWidth}
-                                                                                    isDragging={draggingTaskId === task.id}
-                                                                                    isResizing={resizingTaskId === task.id}
-                                                                                    resizeEdge={resizeEdge}
+                                                                                    isDragging={false} // Force this to false in sorting mode
+                                                                                    isResizing={false} // Force this to false in sorting mode
+                                                                                    resizeEdge={null}  // Force this to null in sorting mode
                                                                                     timeRange={timeRange}
-                                                                                    onDragStart={handleTaskDragStart}
-                                                                                    onDrag={handleTaskDrag}
-                                                                                    onDragEnd={handleTaskDragEnd}
-                                                                                    onResizeStart={handleTaskResizeStart}
-                                                                                    onResize={handleTaskResize}
-                                                                                    onResizeEnd={handleTaskResizeEnd}
-                                                                                    onTaskClick={handleTaskClick}
+                                                                                    onDragStart={() => { }} // Empty function in sorting mode
+                                                                                    onDrag={() => { }}     // Empty function in sorting mode
+                                                                                    onDragEnd={() => { }}  // Empty function in sorting mode
+                                                                                    onResizeStart={() => { }} // Empty function in sorting mode
+                                                                                    onResize={() => { }}     // Empty function in sorting mode
+                                                                                    onResizeEnd={() => { }}  // Empty function in sorting mode
+                                                                                    onTaskClick={() => { }}  // Empty function in sorting mode
                                                                                     projectColor={projectColor}
-                                                                                    sortingMode={sortingMode}
+                                                                                    sortingMode={true}
                                                                                     dragHandleProps={provided.dragHandleProps}
                                                                                 />
                                                                             </div>
@@ -699,7 +697,7 @@ export function GanttChart({
                                                         onResizeEnd={handleTaskResizeEnd}
                                                         onTaskClick={handleTaskClick}
                                                         projectColor={projectColor}
-                                                        sortingMode={sortingMode}
+                                                        sortingMode={false} // Force to false in normal mode
                                                     />
                                                 );
                                             })}
