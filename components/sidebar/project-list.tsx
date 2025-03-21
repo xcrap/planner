@@ -116,15 +116,16 @@ export function ProjectList() {
                 <h2 className="text-xl font-bold">Projects</h2>
                 <div className="flex items-center gap-2">
                     <Button
-                        variant={sortingMode ? "default" : "outline"}
+                        variant="secondary"
                         onClick={toggleSortingMode}
-                        className={sortingMode ? "bg-neutral-800 text-white" : ""}
+                        className={sortingMode ? "bg-neutral-800 text-white hover:bg-black" : "hover:bg-neutral-200"}
                     >
                         <ArrowDownUp className="h-4 w-4 mr-1" /> Sort
                     </Button>
                     <Button
                         onClick={handleAddNew}
-                        variant="outline"
+                        variant="secondary"
+                        className="hover:bg-neutral-200"
                     >
                         <Plus className="h-4 w-4 mr-1" /> Add
                     </Button>

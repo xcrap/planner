@@ -494,20 +494,21 @@ export function GanttChart({
                 <h2 className="text-xl font-bold">{chartTitle}</h2>
                 <div className="flex items-center space-x-4">
                     <Button
-                        variant={sortingMode ? "default" : "outline"}
+                        // variant={sortingMode ? "default" : "secondary"}
+                        variant="secondary"
                         onClick={toggleSortingMode}
-                        className={sortingMode ? "bg-neutral-800 text-white" : ""}
+                        className={sortingMode ? "bg-neutral-800 text-white hover:bg-black" : "hover:bg-neutral-200"}
                     >
                         <ArrowDownUp className="h-4 w-4 mr-1" /> Sort
                     </Button>
-                    <Button variant="outline" onClick={handleAddTask}>
+                    <Button variant="secondary" className="hover:bg-neutral-200" onClick={handleAddTask}>
                         <Plus className="h-4 w-4 mr-1" /> Add Task
                     </Button>
                     <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="icon" onClick={() => setDayWidth(prev => Math.max(30, prev - 10))}>
+                        <Button variant="secondary" className="hover:bg-neutral-200" size="icon" onClick={() => setDayWidth(prev => Math.max(30, prev - 10))}>
                             <ZoomOut size={20} />
                         </Button>
-                        <Button variant="outline" size="icon" onClick={() => setDayWidth(prev => Math.min(120, prev + 10))}>
+                        <Button variant="secondary" className="hover:bg-neutral-200" size="icon" onClick={() => setDayWidth(prev => Math.min(120, prev + 10))}>
                             <ZoomIn size={20} />
                         </Button>
                     </div>
