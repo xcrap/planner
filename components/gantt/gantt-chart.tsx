@@ -569,7 +569,7 @@ export function GanttChart({
                                         if (!projectTasks || projectTasks.length === 0) return null;
 
                                         return (
-                                            <div key={`project-${projectIdNum}`} className="mb-2">
+                                            <div key={`project-${projectIdNum}`}>
                                                 <ProjectHeader
                                                     key={`project-header-${projectIdNum}`}
                                                     projectId={projectIdNum}
@@ -655,7 +655,7 @@ export function GanttChart({
                                     if (!projectTasks || projectTasks.length === 0) return null;
 
                                     return (
-                                        <div key={`project-${projectIdNum}`} className="mb-2">
+                                        <div key={`project-${projectIdNum}`}>
                                             <ProjectHeader
                                                 projectId={projectIdNum}
                                                 projectName={project?.name || ''}
