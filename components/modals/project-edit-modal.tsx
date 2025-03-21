@@ -13,7 +13,7 @@ interface ProjectEditModalProps {
 }
 
 export function ProjectEditModal({ project, isOpen, onClose }: ProjectEditModalProps) {
-    const { addProject, updateProject, deleteProject } = useAppStore();
+    const { addProject, updateProject, deleteProject, projects } = useAppStore();
 
     const [formData, setFormData] = useState({
         name: '',
@@ -61,7 +61,15 @@ export function ProjectEditModal({ project, isOpen, onClose }: ProjectEditModalP
 
         try {
             if (isNewProject) {
-                await addProject(formData);
+                // Calculate next order value based on existing projects
+                const nextOrder = Array.isArray(projects) && projects.length > 0
+                    ? Math.max(...projects.map(p => p.order)) + 1
+                    : 0;
+
+                await addProject({
+                    ...formData,
+                    order: nextOrder
+                });
             } else if (project) {
                 await updateProject({
                     id: project.id,
