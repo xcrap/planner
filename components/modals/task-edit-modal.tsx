@@ -95,7 +95,7 @@ export function TaskEditModal() {
             ...formData,
             startDate: `${formData.startDate}T00:00:00.000Z`,
             endDate: `${formData.endDate}T00:00:00.000Z`,
-            order: 0
+            order: selectedTask.order
         };
 
         if (isNewTask) {
