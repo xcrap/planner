@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CalendarIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Calendar } from "@/components/ui/calendar"
+import { normalizeToUTCDate } from "@/lib/utils";
 import {
     Popover,
     PopoverContent,
@@ -36,15 +37,15 @@ export function TaskEditModal() {
     // Get projects from store
     const projects = useAppStore(state => state.projects);
 
-    // Add this function
+    // Update this function to use normalizeToUTCDate
     const getCalendarSelectedDate = (dateString: string) => {
         if (!dateString) return undefined;
-
-        // Parse the yyyy-MM-dd string and create a local date object that will display correctly
-        const [year, month, day] = dateString.split('-').map(Number);
-
-        // Create a local date without time components
-        return new Date(year, month - 1, day);
+        const utcDate = normalizeToUTCDate(dateString);
+        return new Date(
+            utcDate.getUTCFullYear(),
+            utcDate.getUTCMonth(),
+            utcDate.getUTCDate()
+        );
     };
 
     useEffect(() => {
@@ -187,10 +188,15 @@ export function TaskEditModal() {
                                         selected={getCalendarSelectedDate(formData.startDate)}
                                         onSelect={(date) => {
                                             if (date) {
-                                                // Format date directly without UTC conversion
-                                                const year = date.getFullYear();
-                                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                const day = String(date.getDate()).padStart(2, '0');
+                                                // Convert local date to UTC to maintain consistency
+                                                const utcDate = new Date(Date.UTC(
+                                                    date.getFullYear(),
+                                                    date.getMonth(),
+                                                    date.getDate()
+                                                ));
+                                                const year = utcDate.getUTCFullYear();
+                                                const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+                                                const day = String(utcDate.getUTCDate()).padStart(2, '0');
                                                 setFormData(prev => ({
                                                     ...prev,
                                                     startDate: `${year}-${month}-${day}`
@@ -228,10 +234,15 @@ export function TaskEditModal() {
                                         selected={getCalendarSelectedDate(formData.endDate)}
                                         onSelect={(date) => {
                                             if (date) {
-                                                // Format date directly without UTC conversion
-                                                const year = date.getFullYear();
-                                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                const day = String(date.getDate()).padStart(2, '0');
+                                                // Convert local date to UTC to maintain consistency
+                                                const utcDate = new Date(Date.UTC(
+                                                    date.getFullYear(),
+                                                    date.getMonth(),
+                                                    date.getDate()
+                                                ));
+                                                const year = utcDate.getUTCFullYear();
+                                                const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+                                                const day = String(utcDate.getUTCDate()).padStart(2, '0');
                                                 setFormData(prev => ({
                                                     ...prev,
                                                     endDate: `${year}-${month}-${day}`

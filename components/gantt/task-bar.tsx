@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { Task } from '@/types/task';
 import { Check, GripVertical } from 'lucide-react';
 import type { DraggableProvidedDragHandleProps } from '@hello-pangea/dnd';
+import { normalizeToUTCDate } from '@/lib/utils';
 
 type TaskBarProps = {
     task: Task;
@@ -56,12 +57,6 @@ export function TaskBar({
     // The startOffset and duration props now include preview values from parent
     const left = startOffset * dayWidth;
     const width = duration * dayWidth;
-
-    // Normalize date to UTC
-    const normalizeToUTCDate = (dateString: string) => {
-        const parts = dateString.split('T')[0].split('-').map(Number);
-        return new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
-    };
 
     // Format date in UTC explicitly
     const formatUTCDate = (dateString: string) => {

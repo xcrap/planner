@@ -10,12 +10,7 @@ import { useAppStore } from '@/lib/store';
 import type { Task, Project } from '@/types/task';
 import { ProjectHeader } from '@/components/gantt/project-header';
 import { DragDropContext, Droppable, Draggable, type DropResult } from "@hello-pangea/dnd";
-
-// Move the function outside the component so it's not recreated on each render
-const normalizeToUTCDate = (date: string) => {
-    const d = new Date(date);
-    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-};
+import { normalizeToUTCDate } from '@/lib/utils';
 
 type GanttChartProps = {
     projects: Project[];
@@ -341,15 +336,18 @@ export function GanttChart({
     };
 
     const handleAddTask = () => {
+        // Get today's date in local time and convert to UTC midnight
         const today = new Date();
-        // Create UTC dates
-        const utcToday = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+        const utcToday = new Date(Date.UTC(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate()
+        ));
         const utcTomorrow = addDays(utcToday, 1);
 
         // Determine which project to add the task to
         let targetProjectId = projectId;
         if (!targetProjectId && projects.length > 0) {
-            // If no specific project is selected, use the first available project
             targetProjectId = projects[0].id;
         }
 
@@ -361,8 +359,8 @@ export function GanttChart({
         const newTask = {
             name: 'New Task',
             description: '',
-            startDate: format(utcToday, 'yyyy-MM-dd'),
-            endDate: format(utcTomorrow, 'yyyy-MM-dd'),
+            startDate: `${utcToday.toISOString().split('T')[0]}T00:00:00.000Z`,
+            endDate: `${utcTomorrow.toISOString().split('T')[0]}T00:00:00.000Z`,
             completed: false,
             projectId: targetProjectId,
             order: currentProject?.tasks?.length || 0
