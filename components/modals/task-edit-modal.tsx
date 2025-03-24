@@ -188,21 +188,16 @@ export function TaskEditModal() {
                                         selected={getCalendarSelectedDate(formData.startDate)}
                                         onSelect={(date) => {
                                             if (date) {
-                                                // Convert local date to UTC to maintain consistency
-                                                const utcDate = new Date(Date.UTC(
-                                                    date.getFullYear(),
-                                                    date.getMonth(),
-                                                    date.getDate()
-                                                ));
-                                                const year = utcDate.getUTCFullYear();
-                                                const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
-                                                const day = String(utcDate.getUTCDate()).padStart(2, '0');
+                                                // Since the date from the calendar is already in local timezone at midnight,
+                                                // we need to create a UTC date that represents the same calendar day
+                                                const year = date.getFullYear();
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const day = String(date.getDate()).padStart(2, '0');
                                                 setFormData(prev => ({
                                                     ...prev,
                                                     startDate: `${year}-${month}-${day}`
                                                 }));
                                             }
-                                            // Close the popover after selection
                                             setStartDateOpen(false);
                                         }}
                                         initialFocus
@@ -234,21 +229,16 @@ export function TaskEditModal() {
                                         selected={getCalendarSelectedDate(formData.endDate)}
                                         onSelect={(date) => {
                                             if (date) {
-                                                // Convert local date to UTC to maintain consistency
-                                                const utcDate = new Date(Date.UTC(
-                                                    date.getFullYear(),
-                                                    date.getMonth(),
-                                                    date.getDate()
-                                                ));
-                                                const year = utcDate.getUTCFullYear();
-                                                const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
-                                                const day = String(utcDate.getUTCDate()).padStart(2, '0');
+                                                // Since the date from the calendar is already in local timezone at midnight,
+                                                // we need to create a UTC date that represents the same calendar day
+                                                const year = date.getFullYear();
+                                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                const day = String(date.getDate()).padStart(2, '0');
                                                 setFormData(prev => ({
                                                     ...prev,
                                                     endDate: `${year}-${month}-${day}`
                                                 }));
                                             }
-                                            // Close the popover after selection
                                             setEndDateOpen(false);
                                         }}
                                         initialFocus

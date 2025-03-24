@@ -162,6 +162,7 @@ export function GanttChart({
     const calculateTimeRange = useCallback((taskList: Task[]) => {
         if (!taskList.length) {
             const today = new Date();
+            // Create UTC date at midnight for the first day of the month
             const start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
             const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 0));
             const range: Date[] = [];
@@ -169,13 +170,14 @@ export function GanttChart({
             let current = new Date(start);
             while (current <= end) {
                 range.push(new Date(current));
-                current = addDays(current, 1);
+                current = new Date(current.getTime() + 24 * 60 * 60 * 1000); // Add exactly 24 hours
             }
 
             setTimeRange(range);
             return;
         }
 
+        // For existing tasks, find the range that encompasses all tasks
         let earliestDate = normalizeToUTCDate(taskList[0].startDate);
         let latestDate = normalizeToUTCDate(taskList[0].endDate);
 
@@ -186,22 +188,21 @@ export function GanttChart({
             if (taskStartDate < earliestDate) {
                 earliestDate = taskStartDate;
             }
-
             if (taskEndDate > latestDate) {
                 latestDate = taskEndDate;
             }
         }
 
         // Add padding days
-        earliestDate = addDays(earliestDate, -3);
-        latestDate = addDays(latestDate, 3);
+        earliestDate = new Date(earliestDate.getTime() - (3 * 24 * 60 * 60 * 1000)); // Subtract 3 days
+        latestDate = new Date(latestDate.getTime() + (3 * 24 * 60 * 60 * 1000)); // Add 3 days
 
         const range: Date[] = [];
         let current = new Date(earliestDate);
 
         while (current <= latestDate) {
             range.push(new Date(current));
-            current = addDays(current, 1);
+            current = new Date(current.getTime() + 24 * 60 * 60 * 1000); // Add exactly 24 hours
         }
 
         setTimeRange(range);
@@ -666,10 +667,11 @@ export function GanttChart({
                                                 const endDateParts = task.endDate.split('T')[0].split('-').map(Number);
                                                 const startDate = new Date(Date.UTC(startDateParts[0], startDateParts[1] - 1, startDateParts[2]));
                                                 const endDate = new Date(Date.UTC(endDateParts[0], endDateParts[1] - 1, endDateParts[2]));
-                                                const timeRangeStartParts = timeRange[0].toISOString().split('T')[0].split('-').map(Number);
-                                                const timeRangeStartUTC = new Date(Date.UTC(timeRangeStartParts[0], timeRangeStartParts[1] - 1, timeRangeStartParts[2]));
-                                                const startOffset = differenceInDays(startDate, timeRangeStartUTC);
-                                                const duration = differenceInDays(endDate, startDate) + 1;
+                                                const timeRangeStartUTC = timeRange[0]; // timeRange already contains UTC dates
+
+                                                // Calculate start offset using timestamps for more accurate day difference
+                                                const startOffset = Math.floor((startDate.getTime() - timeRangeStartUTC.getTime()) / (24 * 60 * 60 * 1000));
+                                                const duration = Math.floor((endDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000)) + 1;
 
                                                 // Apply preview offsets for the active task
                                                 const previewDragOffset = (draggingTaskId === task.id) ? dragPreviewOffset : 0;
